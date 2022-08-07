@@ -282,13 +282,25 @@ body {
   }
 }
 
-/***************************** INDEX INFO *************************/
+/***************************** INDEX FEATURES *************************/
+@media (max-width: 768px) {
+  .index-features {
+    flex-direction: column;
+  }
+
+  .feature-card {
+    width: 60%!important;
+    margin-bottom: 40px;
+  }
+}
+
 .index-features {
   padding-top: 100px;
   padding-bottom: 100px;
 
   display: flex;
   justify-content: space-around;
+  align-items: center;
 }
 
 .feature-card {
@@ -337,4 +349,5 @@ body {
   color: white;
 }
 
+/***************************** INDEX FUNCTIONALITIES *************************/
 

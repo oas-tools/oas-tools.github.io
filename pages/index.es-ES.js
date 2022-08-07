@@ -15,30 +15,30 @@ export default () => {
     const [scrollState, setScrollState] = useState(0);
     const [top, setTop] = useState(20);
 
-    const controlNavbar = () => {
-        if (typeof window !== 'undefined') {
-          if (window.scrollY > (window.innerHeight - 100)) {
-            setShowNav(true); 
-            setTop(0);
-          } else {
-            setShowNav(false);
-            setTop(-100);
-          }
-          setScrollState(window.scrollY);
+    useEffect(() => {
+        function controlNavbar() {
+            if (typeof window !== 'undefined') {
+              if (window.scrollY > (window.innerHeight - 100)) {
+                setShowNav(true); 
+                setTop(0);
+              } else {
+                setShowNav(false);
+                setTop(-100);
+              }
+              setScrollState(window.scrollY);
+            }
         }
-      }
 
-      useEffect(() => {
         if (typeof window !== 'undefined') {
           window.addEventListener('scroll', controlNavbar);
           return () => { // cleanup function
             window.removeEventListener('scroll', controlNavbar);
           };
         }
-      }, [scrollState]);
+    }, [scrollState]);
 
     return (
-        <div className="select-none">
+        <div className="index-body select-none">
             {/* NAV BAR */}
             <div className="nextra-nav-container z-20 sticky bg-transparent w-full" style={{top: top, transition: "top 0.3s"}}>
                 <div className={`${showNav ? 'show-nav bg-white dark:bg-dark' : 'bg-transparent'} nextra-nav-container-blur absolute w-full h-full pointer-events-none`} style={{zIndex:-1}}></div>
