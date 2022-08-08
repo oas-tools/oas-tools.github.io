@@ -1,0 +1,26 @@
+.windowContainer {
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.dot {
+    height: 12px;
+    width: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+.windowNav {
+    padding: 10px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    background-color: #f1f1f1;
+}
+
+.windowContent {
+    border: 3px solid white;
+    background-color: white;
+    border-radius: 0 0 4px 4px;
+    border-top: none;
+}

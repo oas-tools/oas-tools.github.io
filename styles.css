@@ -1,5 +1,6 @@
 html {
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "ss06" 1 !important;
+  scrollbar-width: thin;
 }
 
 /* SCROLLBAR */
@@ -65,6 +66,13 @@ body {
 /********************************************************************/
 /***************************** INDEX STYLES *************************/
 /********************************************************************/
+
+@media only screen and (hover: none) and (pointer: coarse){
+  .index-padding {
+    width: 100%!important;
+  }
+}
+
 .show-nav {
   --tw-bg-opacity: 0.85!important;
   -webkit-mask: linear-gradient(180deg, black 85%, transparent);
@@ -73,7 +81,7 @@ body {
 }
 
 .index-padding {
-  width: calc(100vw - 10px)!important;
+  width: calc(100vw - 10px);
   padding-left: 112px;
   padding-right: 112px;
 }
@@ -350,4 +358,154 @@ body {
 }
 
 /***************************** INDEX FUNCTIONALITIES *************************/
+@media (max-width: 1000px) {
+  .index-functionalities > div {
+    align-items: center;
+  }
+}
+@media (max-width: 768px) {
+  .index-functionalities > div {
+    flex-direction: column!important;
+    gap: 20px!important;
+  }
+
+  .index-functionalities > h1 {
+    width: 80%!important;
+    margin-left: -40%!important;
+  }
+
+  .index-functionalities > div:hover > div {
+    transform: none!important;
+  }
+
+  .index-functionalities > div:hover > span {
+    transform: none!important;
+  }
+}
+
+.dark #windowComponentNav {
+  background-color: rgb(17 17 17/0.8);
+}
+
+.dark #windowComponentContent {
+  background-color: black;
+  border: 3px solid black;
+  border-top: none;
+}
+
+.index-functionalities > h1 {
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 0.15ch;
+  background-color: rgb(243 244 246/var(--tw-bg-opacity));
+  border-radius: 0 0 20px 20px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 20px;
+  text-align: center;
+  width: 34%;
+  top: 0;
+  left: 50%;
+  margin-left: -17%;
+  position: absolute;
+}
+
+.dark .index-functionalities > h1 {
+  background-color: rgb(23 23 23/var(--tw-bg-opacity));
+}
+
+.index-functionalities {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  background: linear-gradient(90deg, rgba(0, 202, 20, 0.8), greenyellow);
+  padding-top: 100px;
+  padding-bottom: 100px;
+}
+
+.index-functionalities > div {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex: 50% 50%;
+  gap: 50px;
+  justify-content: space-between;
+  padding: 20px 10px;
+}
+
+.index-functionalities > div:nth-child(even) {
+  flex-direction: row-reverse;
+}
+
+.index-functionalities > div > * {
+  width: 100%;
+}
+
+.index-functionalities > div > div {
+  filter: drop-shadow(2px 4px 6px rgb(17 17 17/0.8));
+  transition: transform 0.3s;
+}
+
+.index-functionalities > div:nth-child(even):hover > div {
+  transform: perspective(800px) rotateY(20deg)
+}
+
+.index-functionalities > div:nth-child(odd):hover > div {
+  transform: perspective(800px) rotateY(-20deg)
+}
+
+.index-functionalities > div > span {
+  transition: transform 0.3s;
+}
+
+.index-functionalities > div:hover > span {
+  transform: scale(1.1)
+}
+
+.index-functionalities > div > span > h2{
+  color: black;
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 0.15ch;
+  word-spacing: 0.4ch;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.index-functionalities > div > span > p {
+  text-align: justify;
+  color: black;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/***************************** INDEX PEVIEW *************************/
+@media (max-width: 768px) {
+  .index-preview > h1 {
+    width: 80%!important;
+    margin-left: -40%!important;
+  }
+}
+
+.index-preview > h1 {
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 0.15ch;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 0px 10px 0px;
+  font-weight: 600;
+  font-size: 20px;
+  text-align: center;
+  width: 34%;
+  bottom: 98%;
+  left: 50%;
+  margin-left: -17%;
+  position: absolute;
+}
+
+.index-preview > h3 {
+  letter-spacing: 0.15ch;
+  margin: -25px 0 30px 0;
+  width: 100%;
+  font-size: 24px;
+  font-style: italic;
+  font-weight: lighter;
+  text-align: center;
+}
 
