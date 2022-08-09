@@ -23,6 +23,16 @@ module.exports = withNextra({
         destination: "/docs/intro",
         statusCode: 302,
       },
+      {
+        source: "/blog",
+        destination: "/blog/index",
+        statusCode: 301,
+      },
+      {
+        source: "/blog",
+        destination: "/blog/index",
+        statusCode: 302,
+      },
     ]
   }
 })
