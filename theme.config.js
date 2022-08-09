@@ -57,11 +57,11 @@ export default {
         <meta name="description" content="OAS Tools: A NodeJS OpenAPI framework" />
         <meta name="og:description" content="OAS Tools: A NodeJS OpenAPI framework" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content="" />
+        <meta name="twitter:image" content="https://oas-tools.github.io/public/img/og-image.png" />
         <meta name="twitter:site:domain" content="oas-tools.github.io" />
         <meta name="twitter:url" content="https://oas-tools.github.io" />
         <meta name="og:title" content="OAS Tools: A NodeJS OpenAPI framework" />
-        <meta name="og:image" content="" />
+        <meta name="og:image" content="https://oas-tools.github.io/public/img/og-image.png" />
         <meta name="apple-mobile-web-app-title" content="OAS Tools" />
         <link
           rel="apple-touch-icon"

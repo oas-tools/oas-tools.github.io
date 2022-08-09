@@ -11,7 +11,7 @@ export default function BlogIndex() {
         getPagesUnderRoute("/blog/articles")
         .sort((a,b) => new Date(b.frontMatter.date) - new Date(a.frontMatter.date))
         .map((page) => {
-          const pageImg = require(`../public/img/${page.frontMatter.image}`);
+          const pageImg = require(`../public/blog/${page.frontMatter.image}`);
           
           return (
             <Link href={page.route}>
