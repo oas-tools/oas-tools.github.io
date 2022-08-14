@@ -48,6 +48,7 @@ export default () => {
                     <Logo size={75}/>
                     <div className='flex-1'></div>
                     <a className="px-4 nextra-nav-link no-underline whitespace-nowrap p-2 -ml-2 hidden md:inline-block active text-xl text-current color-black dark:color-white" aria-selected="true" href="/docs" style={{fontWeight: "bold"}}>DOCUMENTACI&Oacute;N</a>
+                    <a className="px-4 nextra-nav-link no-underline whitespace-nowrap p-2 -ml-2 hidden md:inline-block active text-xl text-current color-black dark:color-white" aria-selected="true" href="https://github.com/orgs/oas-tools/discussions" style={{fontWeight: "bold"}}>FORO</a>
                     <a className="px-4 nextra-nav-link no-underline whitespace-nowrap p-2 -ml-2 hidden md:inline-block active text-xl text-current color-black dark:color-white" aria-selected="true" href="/blog" style={{fontWeight: "bold"}}>BLOG</a>
                     <a className="px-4 text-current p-2" href="https://github.com/oas-tools" target="_blank" rel="noreferrer">
                         <svg height="24" viewBox="2 2 20 20" fill="none" aria-hidden="true">
