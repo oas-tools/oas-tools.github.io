@@ -6,7 +6,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "mermaid": "^9.1.4",
+    "mermaid": "9.1.4",
     "next": "12.2.0",
     "nextra": "2.0.0-beta.6",
     "nextra-theme-docs": "2.0.0-beta.6",
