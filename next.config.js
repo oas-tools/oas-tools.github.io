@@ -10,7 +10,11 @@ module.exports = withNextra({
   //   locales: ['en-US', 'es-ES'],
   //   defaultLocale: 'en-US'
   // },
-
+  experimental: {
+    images: {
+      unoptimized: true
+    }
+  },
   redirects: () => {
     return [
       {
