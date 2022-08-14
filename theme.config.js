@@ -27,10 +27,10 @@ export default {
           return "Edit this page on GitHub →";
       }
     },
-    i18n: [
-      { locale: 'en-US', text: 'English' },
-      { locale: 'es-ES', text: 'Español' }
-    ],
+    // i18n: [
+    //   { locale: 'en-US', text: 'English' },
+    //   { locale: 'es-ES', text: 'Español' }
+    // ],
     feedbackLabels: "feedback",
     feedbackLink: () => {
       const { locale } = useRouter();

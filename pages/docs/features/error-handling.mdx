@@ -1,0 +1,40 @@
+---
+title: Errors
+---
+
+# Error handling
+OAS Tools internally uses custom error classes that are defined in the [Commons library](https://github.com/oas-tools/oas-commons). Additionally, the framework has a built-in error handler that is active by default (`middleware.error.disable` is set to ´false´ in configuration).
+
+## Built-in handler
+The built-in handler catches the errors produced during the execution flow along the middleware chain and produces a response based on the type of error that has been thrown. The folloing table contanis the description and the response produced by the handler for each error.
+
+| **Error** 	| **Description** 	| **Handler response** 	|
+|---	|---	|:---:	|
+| `RequestValidationError` 	| Error thrown when the response content or content-type is invalid 	| `500 Internal Server Error` or `406 Not Accepted` 	|
+| `SecurityError` 	| Error thrown when missing required credentials 	| `401 Unauthorized` 	|
+| `AuthError` 	| Error thrown when request credentials are invalid or lack privileges 	| `403 Forbidden` 	|
+
+Other classes, like `ConfigError`, `UnsupportedError` and `RoutingError` are not handled by the built-in middleware since they are thrown upon initialization and not during the request process.
+
+## Extending the handler
+As mentioned in the [Configuration section](../fundamentals/config), the built-in error handler may be extended by providing a custom function for handling new errors. That function is set in configuration and is executed right after the built-in handler.
+
+```js
+// oastools.config.js
+
+module.exports = {
+  middleware: {
+    error: {
+      customHandler: (err, send) => {
+        if (err.name === "JsonWebTokenError") send(403);
+      }
+    }
+  }
+}
+```
+
+The custom handler function must take two arguments: the error and a send function. The example above shows how to handle an error thrown by JWT Node.js library. The send function takes one mandatory argument, which is the status code of the response, and optionally can take the response body that will be sent to client.
+
+By default, the errors are sent to client as an object following the following format `{error: "<error name>: <error message>" }` but it can be overridden setting the second parameter in the `send` function received in the handler arguments.
+
+> Errors are printed to console using the configured logger, if you want to use a custom logger check the [custom logger](../customization/custom-loger) section.

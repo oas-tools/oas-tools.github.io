@@ -1,0 +1,14 @@
+{
+    "index": {
+        "type": "page",
+        "theme": {
+            "sidebar": false
+        }
+    },
+    "articles": {
+        "type": "page",
+        "theme": {
+            "sidebar": false
+        }
+    }
+}

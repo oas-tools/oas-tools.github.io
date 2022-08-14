@@ -1,0 +1,73 @@
+---
+title: Overview
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+import Callout from 'nextra-theme-docs/callout'
+import Bleed from 'nextra-theme-docs/bleed'
+
+# Overview
+
+<Callout type="info" emoji="ⓘ">
+    This is the OAS Tools v3 documentation
+    - OAS Tools v2 docs can be found at [GitHub Readme](https://github.com/oas-tools/oas-tools/blob/2.2.2/README.md).
+    - Upgrading from OAS Tools v2? Check out the [Migration guide](../migration).
+</Callout>
+
+## What is OAS Tools?
+OAS Tools is a lightweight server-side framework built over [Express.js](http://expressjs.com/es/) in order to create REST services that meet a declaration written following the [OpenAPI specification](https://www.openapis.org/).
+
+The OAS Tools ecosystem is formed by the Core package, the Commons library, the command-line interface tool and External Modules, that interact with each other like shown below:
+
+<Mermaid id={"1"}>
+flowchart LR;
+    Resource(Entity \n Resource)
+    OASDoc(OpenAPI \n Document)
+    CLI(CLI)
+    subgraph NodeServer [Node.js Server]
+        direction LR
+            Core(Core) --> ExtModule(External \n Modules)
+            ExtModule --> Commons(Commons \n Library)
+            Core --> Commons
+    end
+    Resource --> CLI
+    OASDoc --> CLI
+    CLI --> NodeServer
+    style NodeServer rx:10,ry:10
+</Mermaid>
+
+- OAS Tools core contains modules capable of performing validation and routing operations that provide the required functionality for an HTTP server to work according to what has been specified in the OpenAPI document.
+
+- The [Commons library](https://github.com/oas-tools/oas-commons) contains auxiliary function and classes that help develop new modules which are easily integrable inside the OAS Tools ecosystem. Those modules are classes wrapping a middleware function that get registered in the underlying Express chain. Check out the [customization section](../customization/installing-modules) for a more in depth explanation on how to develop and install external modules.
+
+- The CLI allows the user to quickly create new REST services with OAS Tools core under the hood. Besides, the CLI provides functions to create new external modules from the OpenAPI document or even an entity resource. A full workspace with all the tools required for developing the project can be also generated through the command line. Check out the [CLI documentation](../cli) for more info.
+
+## Middleware chain
+The OAS Tools core library provides a number of middleware functions that get registered under the Express.js middleware chain. Those middleware get registered for every path specified in the OpenAPI document, except for the [Swagger Interface](../features/swaggerUI) and the [Error Handler](../features/error-handling), which get registered under different paths.
+
+<Mermaid id={"2"}>
+flowchart LR;
+    REQUEST[Request]
+    OAS-PARAMS(Parameter \n Parser)
+    OAS-SECURITY(Security \nMiddleware)
+    OAS-VALIDATOR(Request/Response \n Validation)
+    OAS-ROUTER(Router \n Middleware)
+    ERRORH(Error \n Handler)
+    SWAGGERUI(Swagger \n Interface)
+    REQUEST -- /path --> OAS-PARAMS
+    REQUEST -- /docs --> SWAGGERUI
+    REQUEST -- / --> ERRORH
+    OAS-PARAMS-->OAS-SECURITY
+    OAS-SECURITY-->OAS-VALIDATOR
+    OAS-VALIDATOR-->OAS-ROUTER
+</Mermaid>
+
+The functions registered under `/{path}` are the ones that provide the functionality to the OpenAPI v3 features, whereas the SwaggerUI and the Error handler are used for documentation and catching errors, respectively.
+
+- **Parameter parser**: Supports OpenAPI 3.X [parameter serialization](https://swagger.io/docs/specification/serialization/), it is capable of read the parameters (including the body) specified for each path and parse them to the type specified in the `schema` field. Once the parameters are read an converted, it passes them to Express' `res.locals` in order to make them available for the next middleware execution.
+
+- **Security middleware**: It is responsible for validating `security schemes` specified in the OpenAPI document. By default, it checks for existence, but further validations can be done through handler functions. Check the [security section](../features/security) for more information.
+
+- **Validator**: Performs validation to request and responses according to what has been declared in the OpenAPI document. It relies in [AJV](https://ajv.js.org/) JSON Schema validator. Check the [validation section](../features/validation) for a more in depth explanation on how request and responses are validated.
+
+- **Router**: It is in charge for redirecting the execution flow to the corresponding controller. The [routing section](../features/routing) explains how routing is done.

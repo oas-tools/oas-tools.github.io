@@ -6,10 +6,10 @@ const withNextra = require('nextra')({
 });
 
 module.exports = withNextra({
-  i18n: {
-    locales: ['en-US', 'es-ES'],
-    defaultLocale: 'en-US'
-  },
+  // i18n: {
+  //   locales: ['en-US', 'es-ES'],
+  //   defaultLocale: 'en-US'
+  // },
 
   redirects: () => {
     return [
@@ -23,16 +23,16 @@ module.exports = withNextra({
         destination: "/docs/getting-started/overview",
         statusCode: 302,
       },
-      {
-        source: "/blog",
-        destination: "/blog/index",
-        statusCode: 301,
-      },
-      {
-        source: "/blog",
-        destination: "/blog/index",
-        statusCode: 302,
-      },
+      // {
+      //   source: "/blog",
+      //   destination: "/blog/index",
+      //   statusCode: 301,
+      // },
+      // {
+      //   source: "/blog",
+      //   destination: "/blog/index",
+      //   statusCode: 302,
+      // },
     ]
   }
 })
