@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "export": "next export",
+    "start": "next start"
+  },
   "dependencies": {
     "mermaid": "^9.1.4",
     "next": "12.2.0",
