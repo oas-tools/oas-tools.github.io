@@ -1,3 +1,6 @@
+# Causes crash when running on different OS
+package-lock.json
+
 # Logs
 logs
 *.log
