@@ -1,0 +1,7 @@
+{
+    "swaggerUI": "Interfaz de Swagger",
+    "validation": "Validacion",
+    "routing": "Enrutamiento",
+    "security": "Seguridad",
+    "error-handling": "Gestion de errores"
+}

@@ -1,0 +1,111 @@
+---
+title: Validation
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+import Callout from 'nextra-theme-docs/callout'
+
+# Validation
+<Callout type="info" emoji="ⓘ">
+The errors thrown by validator middleware explained in the [Request Validation](#request-validation) and [Response Validation](#response-validation) sections in this page are handled by the [built-in error handler](../features/error-handling) and therefore the status code that the server sets for the responses when validation is `strict` depends on it being enabled.
+</Callout>
+
+## OpenAPI file validation
+OAS Tools is capable to validate an OpenAPI document thanks through the [Commons library](https://github.com/oas-tools/oas-commons). OAS Tools' commons integrates [AJV](https://ajv.js.org/) JSON Schema validator, wrapped in two functions that validates the whole document or a part of it.
+
+Being the validator integrated in Commons, it is reusable and can be called from different middlewares and tools, such as the CLI or the request and response validator middlewares.
+
+OAS Tools perform a validation of the complete OpenAPI document upon initialization in order to avoid errors caused by the document not being valid towards the correspondent version of the OpenAPI schema. In case the file is not valid, AJV validations error are pretty printed through the built-in logger.
+
+This would be the output when missing the required property 'title' inside `info`:
+```
+2022-08-13 12:08:74 [oas-tools] ERROR: ValidationError: Specification file does not meet OpenAPI 3.0.0 schema.
+- Validation failed at /info > must have required property 'title'
+```
+
+## Request validation
+The request validation is a middleware function that relies on the common's library validation functions to check specific parts of the OpenAPI document, more precissely, it checks parameters andrequest body against OpenAPI schema declaration.
+
+### Parameters
+The parameters are validated for each request depending on what has been specified for that operation:
+
+```yaml
+...
+/endpoint/{id}:
+  get:
+    params:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+...
+```
+
+In the snippet above we have defined a GET request that gets one required parameter named `id`. If we made a GET request to `{server-url}/endpoint` we would get a warning on console (or an error message if `strict` validation has been toggled on in configuration) telling that there has been a validation error due to the parameter `id` being required. The same would happen if we specified a non-integer id, since it is specified to be such type.
+
+> Strict validation causes the server to respond `400 Bad Request` when request validation fails.
+
+```
+2022-08-13 12:08:64 [oas-tools] WARN: Parameter id does not match the schema specified in the OAS Document:
+- Validation failed at #/type > must be integer
+```
+
+### Request body
+Similarly to how parameters validatio works, the request body is validated through the commons library validation functions.
+```yaml
+...
+post:
+  requestBody:
+    description: Body of the request
+    required: true
+      content:
+        application/json:
+          schema:
+            type: object
+...
+```
+In this case, we are defining a post request whith a required content body in which an object must be included formatted as JSON. If we made a POST request without including the body or including non-object content, then the server would print a warning on console or in case `strict` validation is active, respond with `400 Bad Request`.
+
+## Response validation
+The response validation middleware is a special function capable of intercepting responses, validate them and then sending them to the client. Even if this function has performs validation after `res.send()` is executed, it must be registered in the middleware chain before `res.send()` is called, that is why it is registered before the router middleware (check out the diagram in the [routing section](./routing)):
+
+<Mermaid id={"2"}>
+flowchart LR;
+    OAS-PARAMS(Parameter \n Parser)
+    OAS-SECURITY(Security \nMiddleware)
+    OAS-RQVALIDATOR(Request \n Validator)
+    OAS-RPVALIDATOR(Response \n Validator)
+    OAS-ROUTER(Router \n Middleware)
+    OAS-PARAMS-->OAS-SECURITY
+    OAS-SECURITY-->OAS-RQVALIDATOR
+    OAS-RQVALIDATOR-->OAS-RPVALIDATOR
+    OAS-RPVALIDATOR-->OAS-ROUTER
+    style OAS-RPVALIDATOR stroke-width:3px
+</Mermaid>
+
+### Intercepting responses
+As explained above, the response validator is registered before the router middleware that calls `res.sen()` through controllers. However, this middleware is an _interceptor_, meaning it must read the responses sent to client, validate the content and send a new response to the client (or the same if it is valid). 
+
+In order for this middleware to intercept responses, the `res.send()` function is overriden in a way that the validations are performed in the first place, and then the original send function is called:
+
+```js
+const oldSend = res.send;
+res.send = (response) => {   
+    /* response validation */
+
+    oldSend.call(res, newResponse);
+}
+```
+
+### Validating content
+In case of the response content, not only it is necessary to validate the content itself against the schema, but also check that the `content-type` matches the `Accept` header set in requests.
+
+The response content is validated just like the request body before. Its declaration must exist under the `responses` field of each operation specified in the OpenAPI document. Then the middleware will check the data against the schema before it is sent to the client, and print a warning or error message (when `strict` is active) in case the content is not valid. 
+
+> If `strict` is active and the server throws a response validation error due to invalid content, it will respond with a `500 Internal server error` since the responses are set in the server controllers and therefore, it is a server error.
+
+The middleware will also check the response `content-type` MIMEType against the `Accept` header set in request, that way if the response `content-type` is not accepted and validation is set to `strict`, the server will respond with `406 Not Accepted`, else it will print a warn message. In case no `Accept` header is provided in the request, then the server will assume `*/*` as any content type is valid as a response for that request.
+
+> If no content-type is set for response, OAS Tools will assume it is `application/json;charset=utf-8`. 

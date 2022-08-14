@@ -1,0 +1,140 @@
+---
+title: CLI
+---
+
+import Callout from 'nextra-theme-docs/callout'
+
+# Interfaz por línea de comandos (CLI)
+Para ejecutar la herramienta de interfaz de línea de comandos, puede instalarla con npm:
+
+```sh
+npm install -g @oas-tools/cli
+```
+
+Entonces puede ejecutar cualquier comando a través de `oas-tools <command>`. Además, también es posible ejecutar el comando CLI de OAS Tools con `npx`:
+
+```
+npx @oas-tools/cli <command>
+```
+
+> Las siguientes secciones describen los diferentes comandos disponibles a través de la herramienta CLI, siempre puedes consultarlos ejecutando `oas-tools --help`.
+
+## Init
+El comando `init` se utiliza para inicializar un recurso. Los recursos disponibles para inicializar se describen en las siguientes secciones, puede configurar cada uno de ellos después de ejecutar:
+
+```
+oas-tools init
+```
+
+Aparecerá un menú interactivo en el que podrá elegir un recurso para inicializarlo y configurarlo fácilmente respondiendo a algunas preguntas. Sin embargo, el menú interactivo no es compatible con todos los terminales, por lo que es posible ejecutar cada comando de la manera tradicional, como se describe en las siguientes secciones.
+
+### Servicio
+Un servicio REST puede ser inicializado a través de la herramienta de línea de comandos ejecutando el siguiente comando:
+
+```
+oas-tools init server <OpenAPI v3 file in YAML or JSON> [options]
+```
+
+Las opciones posibles se enumeran en la tabla siguiente:
+
+| **Opción**                    | **Por defecto**        |                **Descripción**                |
+|-------------------------------|--------------------|-----------------------------------------------|
+| `-n`, `--path-name <dirpath>` | `generated-server` | Ruta para el directorio generado              |
+| `-p`, `--port <port>`         | `8080`             | Puerto en el que escuchará el servidor    |
+| `-r`, `--recursive`           | -                  | Generar directorios "nombre de la ruta" de forma recursiva  |
+| `-d`, `--dereference`         | -                  | Dereferencia del documento OpenAPI              |
+| `-m`, `--esm`                 | -                  | Utilizar la sintaxis ESM en lugar de CommonJS            |
+| `-j`, `--json`                | -                  | Generar el archivo oas-doc como JSON en lugar de YAML |
+| `-c`, `--container`           | -                  | Generar los archivos necesarios para construir la imagen Docker |
+| `-z`, `--zip`                 | -                  | Generar un zip y eliminar la carpeta          |
+| `-h`, `--help`                | -                  | Mostrar la ayuda del comando                      |
+
+
+### Módulo
+Un Módulo puede ser inicializado a través de la herramienta de línea de comandos ejecutando el siguiente comando:
+
+```
+oas-tools init module <Module name> [options]
+```
+
+Las opciones posibles se enumeran en la tabla siguiente:
+
+| **Opción**          | **Por defecto** | **Descripción**                           |
+|---------------------|-------------|-------------------------------------------|
+| `--generate-server` | -           | Generar un servidor de prueba para el nuevo módulo |
+| `-m`, `--esm`       | -           | Utilizar la sintaxis ESM en lugar de CommonJS        |
+| `-h` `--help`       | -           | Mostrar la ayuda del comando               |
+
+> Tenga en cuenta que el uso de la sintaxis ESM establecerá el `type: module` en el package.json generado. Es posible que tenga que utilizar un transpilador como Babel.js o pasar a Typescript para que el nuevo módulo sea utilizable en servidores CommonJS.
+
+### Entorno de desarrollo
+Se puede inicializar un entorno de desarrollo completo a través de la herramienta de línea de comandos ejecutando el siguiente comando:
+
+```
+oas-tools init dev-env [options]
+```
+
+Las opciones posibles se enumeran en la tabla siguiente:
+
+| **Opción**                   | **Por defecto**                                  | **Descripción**                   |
+|------------------------------|----------------------------------------------|-----------------------------------|
+| `-g`, `--git-repo <url>`     | `https://github.com/oas-tools/oas-tools.git` | Clonar OAS Tools desde un repositorio |
+| `-b`,  `--git-branch <name>` | `develop`                                    | Rama desde la cual se clona el repositorio     |
+| `--clone-commons`            | -                                            | Clonar la biblioteca Commons         |
+| `-h` `--help`                | -                                            | Muestra la ayuda del comando          |
+
+### OpenAPI File
+<Callout type="warning" emoji="⚠">
+No se recomienda utilizar este comando de forma tradicional cuando se proporciona un archivo con demasiados recursos declarados. En su lugar, cambie a un terminal que tenga soporte interactivo y ejecute `oas-tools init` o cree la declaración OpenAPI manualmente.
+</Callout>
+
+Este comando permite generar un archivo OpenAPI válido a partir de un recurso de entidad:
+
+```
+oas-tools init file <Resource file> -n <names> -i <ids> -o <operations> [options]
+```
+
+| **Opción** | **Requerida** | **Por defecto** | **Descripción** |
+|---|---|---|---|
+| `-n`, `--resource-name <name...>` | true | - | Lista conteniendo el nombre de cada recurso |
+| `-i`,  `--id-property <ids...>` | true | - | Lista conteniendo el nombre la propiedad que actúa como id |
+| `-o`, `--operations` | true | - | Objeto conteniendo las operaciones para cada recurso con el formato: `name=op1,op2,op3...` |
+| `-v`, `--version <version>` | false | `3.0.3` | Versión de OpenAPI a utilizar |
+| `-t`, `--title <title>` | false | `Autogenerated Api` | Título para la API  |
+| `-d`, `--description <text>` | false | `Generated with OAS Tools CLI` | Descrpición para la API |
+| `-p`, `--path-name <path>` | false | `process.cwd()/oas-doc.[json\|yaml]` | Ruta donde se generará el archivo |
+| `-j`, `--json`                | -                  | Generar el documento en JSON en lugar de YAML |
+| `-h` `--help`       | -           | Muestra la ayuda del comando                |
+
+Por ejemplo, dada la siguiente declaración de recurso:
+
+```json
+// resources.json
+[
+    {
+        "userId": 1,
+        "name": "User",
+        "email": "user@example.com"
+    },
+    {
+        "petId": 1,
+        "petName": "Garfield",
+        "type": "Cat"
+    }
+]
+```
+
+Se podría generar una declaración OpenAPI válida ejecutando el siguiente comando:
+
+```
+oas-tools init file ./resources.json -n User Pet -i userId petId -o User=GET,POST,PUT Pet=GET
+```
+
+El comando anterior generará una declaración OpenAPI en la que el recurso _User_ tiene tres operaciones: GET, POST y PUT, mientras que el recurso _PET_ sólo tiene una operación GET.
+
+## Validación
+El comando `validate` es una simple instrucción que no toma opciones. Su único propósito es validar un documento OpenAPI de la misma manera que lo hace la biblioteca central de OAS Tools. Dará salida a los errores de validación con el formato explicado en la sección [Validación] (./features/validation).
+
+```
+oas-tools validate <path to OpenApi file>
+```

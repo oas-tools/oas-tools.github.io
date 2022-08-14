@@ -1,0 +1,138 @@
+---
+title: Security
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+import Callout from 'nextra-theme-docs/callout'
+
+# Security
+<Callout type="warning" emoji="⚠">
+This feature is not compatible with Node.js versions before 15.0.0
+</Callout>
+
+## Security schemes
+Security schemes allow you to secure you API by describing protection rules under `securitySchemes` and apply them to some endpoints, operations or to the whole API service. The following schemes are available in the OpenAPI specification 3.X:
+
+1. HTTP authentication (using the Authentication header)
+    * Basic authentication
+    * Bearer authentication
+2. Api keys in headers, query or cookies
+3. OAuth2
+3. OpenIDConnect
+
+### Declaring schemes
+To declare a security scheme, use the `securitySchemes` keyword under components section on your OpenAPI declaration, like shown:
+
+```yaml
+...
+components:
+  securitySchemes:
+    
+    BasicAuth:
+      type: http
+      scheme: basic
+    
+    BearerAuth:
+      type: http
+      scheme: bearer
+    
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    
+    OpenID:
+      type: openIdConnect
+      openIdConnectUrl: https://example.com/.well-known/openid-configuration
+    
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://example.com/oauth/authorize
+          tokenUrl: https://example.com/oauth/token
+          scopes:
+            read: Grants read access
+            write: Grants write access
+            admin: Grants access to admin operations
+```
+
+The snippet above declares all possible types of authentication as described in the OpenAPI specification. More information on each authentication type and its configuration options can be found at the [OpenAPI documentation](https://swagger.io/docs/specification/authentication/).
+
+### Applying schemes
+Security can be applied to the whole API or to one or more operations separately by adding the `security` keyword on the root level or the operation level, respectively. When used on the root level, security applies the specified security schemes globally to all API operations, unless overridden on the operation level:
+
+```yaml
+openapi: 3.0.0
+info:
+...
+
+security:
+  - BasicAuth: []
+
+paths:
+  /api/v1/endpoint:
+    get:
+      security:
+        - BearerAuth: []
+...
+```
+
+In the example above, we are applying the BasicAuth scheme declared in the previous section to the whole API, but it is getting overriden by BearerAuth declared on the operation level. This way, when making a request to `/api/v1/endpoint`, only the BearerAuth will be required.
+
+It is possible to apply multiple schemas at once, and set if they are all required or not. Complex requirements can be done through logical AND and logical OR operations that are declared as described in the following sections.
+
+> Although multiple schemas of different types can be combined, the API must be consistent: You can't use HTTP Bearer and HTTP Basic authentication at the same time, since both use the `Authentication` header. The same happens when declaring multiple api keys, they must be set in different query or cookie params, or in different headers.
+
+#### Logical AND
+When applying multiple schemas, you tipically want all of them to be satisfied in ordet for a request to succeed. To do that, the schemes must be specified as an object inside the `security` propery in the OpenAPI document.
+
+```yaml
+security:
+  BasicAuth: []
+  ApiKeyAuth: []
+```
+
+This way, according to the snippet above, to make a request and obtain a successful response we would need to provide a basic authentication in the `Authentication` header **AND** an api token in the `X-Api-key` header (as declared in the scheme before).
+
+#### Logical OR
+When many schemes are defined, you probably want to emit a successful response when any of them is provided in the request. To do so, the schemes must be specified as an array inside the `security` property in the OpenAPI declaration.
+
+```yaml
+security:
+  - BasicAuth: []
+  - ApiKeyAuth: []
+  - OpenId: [read]
+  - OAuth2: [write]
+```
+
+To get a successful request from a server with the security declaration above we would just have to provide one of the types specified, either Basic auth, an api key **OR** authenticate through OAuth or OpenIDConnect.
+
+> NOTE that OpenID and OAuth2 are scoped (`read` and `write`), read more about scopes in the [OpenAPI documentation](https://swagger.io/docs/specification/authentication/).
+
+## Security Handlers
+When the security middleware is enabled in configuration and security schemes are specified under `components` in the OpenAPI declaration, you need to provide a handler to each one of the security schemes. If a handler is missing or no security schemes are defined, an error will be thrown upon initialization.
+
+Security handlers are functions that implements the desired logic for handling the security schemes, like validating an api key token for an `apikey` type scheme. They are set in the configuration under `middleware.security.auth.<handler>` and the handler name must match the security schemes that is being handled:
+
+```js
+// oastools.config.js
+
+module.exports = {
+  middleware: {
+    security: {
+      auth: {
+        BasicAuth: (token) => {/* Validate encoded token*/ },
+        BearerAuth: (token) => {/* Validate token */ },
+        ApikeyAuth: (token) => {/* Validate the token */ },
+        OAuth2: (secDef, secScope) => { /* OAuth authentication */ },
+        OpenID: (secDef, secScope) => { /* OAuth authentication */ }
+      }
+    }
+  }
+}
+```
+
+> Note that HTTP and Apikey authentication receive the token provided to validate in the arguments, while OAuth2 and OpenID receive the security scheme definition and the scopes array.
+
+The handler function may return a result, typically the decoded token in case of HTTP Authentication. This result is saved to `res.locals.oas.security.<handler>` in order to make it available to controllers later in the execution.

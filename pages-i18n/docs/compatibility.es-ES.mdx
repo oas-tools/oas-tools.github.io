@@ -1,0 +1,165 @@
+---
+title: Compatibilidad
+---
+
+# Compatibilidad
+
+La siguiente tabla muestra la relación de compatibilidad entre los distintos paquetes integrados dentro del ecosistema de OAS Tools y diferentes tecnologías y estándares:
+
+<table class="tg" style={{width: "100%"}}>
+<thead>
+  <tr>
+    <th colSpan="2" style={{textAlign:"center"}}>TABLA DE COMPATIBILIDAD</th>
+    <th colSpan="4" style={{textAlign:"center"}}>Node.js Version</th>
+    <th colSpan="2" style={{textAlign:"center"}}>OpenAPI version</th>
+    <th colSpan="2" style={{textAlign:"center"}}>Javascript syntax</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td colSpan="2" style={{textAlign:"center"}}>Package</td>
+    <td style={{textAlign:"center"}}>&lt;=v12</td>
+    <td style={{textAlign:"center"}}>v14</td>
+    <td style={{textAlign:"center"}}>v16</td>
+    <td style={{textAlign:"center"}}>v18</td>
+    <td style={{textAlign:"center"}}>3.0</td>
+    <td style={{textAlign:"center"}}>3.1</td>
+    <td style={{textAlign:"center"}}>CommonJS</td>
+    <td style={{textAlign:"center"}}>ESM</td>
+  </tr>
+  <tr>
+    <td colSpan="2">@oas-tools/cli</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>-</td>
+    <td style={{textAlign:"center"}}>-</td>
+  </tr>
+  <tr>
+    <td colSpan="2">@oas-tools/commons</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+  </tr>
+  <tr>
+    <td rowSpan="5">oas-tools (v2)</td>
+    <td>Security</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**?**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+  </tr>
+  <tr>
+    <td>Auth</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**?**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+  </tr>
+  <tr>
+    <td>Validator</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**?**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+  </tr>
+  <tr>
+    <td>Router</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**?**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+  </tr>
+  <tr>
+    <td>SwaggerUI</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**?**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+  </tr>
+  <tr>
+    <td rowSpan="5">@oas-tools/core (v3)</td>
+    <td>Params</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+  </tr>
+  <tr>
+    <td>Security</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+  </tr>
+  <tr>
+    <td>Validator</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+  </tr>
+  <tr>
+    <td>Router</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+  </tr>
+  <tr>
+    <td>SwaggerUI</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>✘</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+    <td style={{textAlign:"center"}}>**✓**</td>
+  </tr>
+</tbody>
+</table>

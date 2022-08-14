@@ -1,0 +1,164 @@
+---
+title: "Configuración"
+---
+
+import Mermaid from '../../../components/RenderMermaid';
+import Callout from 'nextra-theme-docs/callout';
+
+# Configuración
+
+<Callout emoji="ⓘ">
+OAS Tools v3 puede leer las opciones de la v2 y transformarlas. Sin embargo, algunas de las nuevas características no estarán disponibles si se utiliza la inicialización de la v2. Consulte la [página de compatibilidad](../compatibility) para obtener más información.
+</Callout>
+
+## Opciones
+
+### Configuración general
+Estas opciones se establecen en el nivel raíz del objeto de configuración. Son opciones de propósito general que afectan principalmente a la inicialización del framework.
+
+| **Opción**| **Tipo**|**Valor predefinido**|**Descripción**|
+|:----:|:----:|:---|:------|
+| packageJSON|  String 	|`./package.json`| Ruta donde se encuentra el archivo package.json |
+| oasFile    |  String 	| <span style={{whiteSpace: "nowrap"}}>`./api/oas-file.yaml`</span> | Ruta del archivo OpenAPI|
+| _useAnnotations (Experimental)_ | Boolean | `false`| Esta característica es experimental. Activa la configuración a través de JSDoc. Consulta la [sección de enrutamiento](../features/routing#annotations) para más información 	|
+
+### Configuración del logger
+Estas opciones afectan al logger por defecto integrado en la biblioteca central de OAS Tools. Se establecen bajo la clave `logger` en el objeto de configuración.
+| **Option** 	| **Type** 	| **Default** 	| **Description** 	|
+|---	|:---:	|:---	|:---	|
+| customLogger 	| Object 	| `null` 	| Logger personalizado para sobreescribir el incorporado. Debe ser una instancia de winston. Establecer esta opción hace que se ignore el resto. 	|
+| level 	| String 	| `info` 	| Nivel de los registros que se imprimen en la consola 	|
+| logFile 	| Boolean 	| `false` 	| Si se guardan los registros en un archivo o no. 	|
+| logFilePath 	| String 	| <span style={{whiteSpace: "nowrap"}}>`./logs/oas-tools.log`</span> 	| Ruta donde se guarda el archivo de logs. Se ignora si logFile es `false`. 	|
+
+### Configuración de los middleware
+Estas opciones se establecen en `middleware.<nombre del middleware>`. Establecen la configuración para cada una de las funciones middleware incorporadas en OAS Tools.
+
+| **Option** 	| **Type** 	| **Default** 	| **Description** 	|
+|---	|:---:	|:---	|:---	|
+| router.disable 	| Boolean 	| `false` 	| Activa el middleware del router. 	|
+| router.controllers 	| String 	| `./controllers` 	| Ruta de acceso al directorio de controladores. 	|
+| validator.requestValidation 	| Boolean 	| `true` 	| Activa la validación de peticiones. 	|
+| validator.responseValidation 	| Boolean 	| `true` 	| Activa la validación de respuestas. 	|
+| validator.strict 	| Boolean 	| `false` 	| Cuando está activo, lanza un error en caso de errores de validación. En otro caso, imprime un mensaje de advertencia. 	|
+| security.disable 	| Boolean 	| `true` 	| Activa el middleware de seguridad. |
+| security.auth 	| Object 	| `null` 	| Objeto que contiene las funciones _handler_ de los esquemas de seguridad. Consulta la sección [seguridad](../features/security) para obtener más información. 	|
+| swagger.disable 	| Boolean 	| `false` 	| Activa la interfaz de swagger 	|
+| swaggger.path 	| String 	| `/docs` 	| Ruta en la cual se mostrará la interfaz de swagger 	|
+| swagger.ui 	| Object 	| `null` 	| Configuración personalizada para la interfaz Swagger. Consulte la [documentación de swagger-ui](https://github.com/scottie1984/swagger-ui-express#swagger-explorer) para obtener más información. 	|
+| error.disable 	| Boolean 	| `false` 	| Activa el manejo de errores integrado. 	|
+| error.printStackTrace 	| Boolean 	| `false` 	| Imprime la traza completa de error. 	|
+| error.customHandler 	| Function 	| `null` 	| Función para extender el manejador de errores incorporado. Consulta la sección [error handler](../features/error-handling) para obtener más información. 	|
+
+## Configurando el proyecto
+La configuración de OAS Tools puede establecerse de múltiples maneras, por lo que se ha establecido un orden de preferencia para las posibles fuentes de configuración:
+
+<Mermaid>
+flowchart RL;
+default(Default config)
+pjson(Package.json config)
+rc(rc config)
+obj(config object)
+obj-- overrides -->rc-- overrides -->pjson-- overrides -->default
+</Mermaid>
+
+### A través del package.json
+La configuración se puede establecer en el package.json bajo la palabra clave `oas-tools`. Por ejemplo, si queremos desactivar el manejo de errores y establecer el nivel de log a `debug`:
+
+```json
+// package.json
+
+{
+  "oas-tools": {
+    "logger": { "level": "debug" },
+    "middleware": { "error": { "disable": true } }
+  }
+
+  ...
+}
+```
+
+### Configuración rc
+OAS Tools utiliza [rc config loader](https://www.npmjs.com/package/rc) para cargar la configuración desde múltiples fuentes, siguiendo el orden de precedencia. Aunque permite establecer la configuración desde variables de entorno o archivos de configuración globales en `/etc` o `$HOME/config`, normalmente se utiliza un archivo local ubicado en la raíz de tu proyecto. Ese archivo debe ser llamado `.oastoolsrc` y puede ser escrito usando la sintaxis `ini` o `JSON`:
+
+```json
+// .oastoolsrc
+{
+    "oasFile": "api/main.yaml",
+    "logger": { "level": "off" }, // setting off or false to logger level deactivates it
+    "useAnnotations": true,
+    "middleware": {
+        "validator": {
+            "strict": true
+        }
+    }
+}
+```
+
+### Pasando un objeto
+Finalmente, puedes pasar un objeto de configuración directamente a la función de inicialización de OAS Tools. Este enfoque es mejor cuando se requiere declarar una función como los manejadores de seguridad o las clases de log personalizadas.
+
+> Tenga en cuenta que este enfoque tiene la máxima prioridad y anulará cualquier otra configuración establecida previamente por cualquier otro medio.
+
+```js
+// index.js
+
+const http = require('http');
+const app = require("express");
+const oasTools = require("@oas-tools/core");
+const app = express();
+
+app.use(express.json());
+var serverPort = 8080;
+
+const config = {
+    middleware: {
+        security: {
+            disable: false,
+            auth: {
+                apikey: (token) => { /* ApiKey security handler */ }
+            }
+        }
+    }
+}
+
+oasTools.initialize(app, config).then(() => {
+    http.createServer(app).listen(serverPort, () => console.log("Server started!"));
+})
+```
+
+En caso de que necesites establecer opciones de configuración complejas, o que la legibilidad de tu archivo de entrada se vea comprometida, es una buena práctica declarar la configuración en un archivo separado, así:
+
+```js
+// oastools.config.js
+
+module.exports = {
+    middleware: {
+        security: {
+            disable: false,
+            auth: {
+                apikey: (token) => { /* ApiKey security handler */ }
+            }
+        }
+    }
+}
+```
+Y luego importarlo en el archivo de entrada:
+
+```js
+// index.js
+
+const http = require('http');
+const app = require("express");
+const oasTools = require("@oas-tools/core");
+const config = require("./oastools.config.js");
+
+const app = express();
+
+app.use(express.json());
+var serverPort = 8080;
+
+oasTools.initialize(app, config).then(() => {
+    http.createServer(app).listen(serverPort, () => console.log("Server started!"));
+})
+```

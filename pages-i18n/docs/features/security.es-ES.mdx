@@ -1,0 +1,138 @@
+---
+title: Seguridad
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+import Callout from 'nextra-theme-docs/callout'
+
+# Security
+<Callout type="warning" emoji="⚠">
+Esta función no es compatible con las versiones de Node.js anteriores a la 15.0.0
+</Callout>
+
+## Esquemas de seguridad
+Los esquemas de seguridad le permiten asegurar su API describiendo reglas de protección en `securitySchemes` y aplicándolas a algunas rutas, operaciones o a todo el servicio de la API. Los siguientes esquemas están disponibles en la especificación OpenAPI 3.X:
+
+1. Autenticación HTTP (mediante la cabecera Authentication)
+    * Autenticación Basic
+    * Autenticación Bearer
+2. Claves Api en cabeceras, consulta o cookies
+3. OAuth2
+3. OpenIDConnect
+
+### Declaración de esquemas
+Para declarar un esquema de seguridad, utilice la palabra clave `securitySchemes` en la sección de componentes de su declaración OpenAPI, como se muestra:
+
+```yaml
+...
+components:
+  securitySchemes:
+    
+    BasicAuth:
+      type: http
+      scheme: basic
+    
+    BearerAuth:
+      type: http
+      scheme: bearer
+    
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    
+    OpenID:
+      type: openIdConnect
+      openIdConnectUrl: https://example.com/.well-known/openid-configuration
+    
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://example.com/oauth/authorize
+          tokenUrl: https://example.com/oauth/token
+          scopes:
+            read: Grants read access
+            write: Grants write access
+            admin: Grants access to admin operations
+```
+
+El fragmento anterior declara todos los tipos de autenticación posibles, tal y como se describen en la especificación de la OpenAPI. Puede encontrar más información sobre cada tipo de autenticación y sus opciones de configuración en la [documentación de OpenAPI](https://swagger.io/docs/specification/authentication/).
+
+### Aplicación de los esquemas
+La seguridad puede aplicarse a toda la API o a una o más operaciones por separado añadiendo la palabra clave `security` en el nivel raíz o en el nivel de operación, respectivamente. Cuando se utiliza en el nivel raíz, la seguridad aplica los esquemas de seguridad especificados globalmente a todas las operaciones de la API, a menos que se anule en el nivel de operación:
+
+```yaml
+openapi: 3.0.0
+info:
+...
+
+security:
+  - BasicAuth: []
+
+paths:
+  /api/v1/endpoint:
+    get:
+      security:
+        - BearerAuth: []
+...
+```
+
+En el ejemplo anterior, estamos aplicando el esquema BasicAuth declarado en la sección anterior a toda la API, pero está siendo anulado por BearerAuth declarado en el nivel de operación. De esta manera, al hacer una petición a `/api/v1/endpoint`, sólo se requerirá el BearerAuth.
+
+Es posible aplicar varios esquemas a la vez, y establecer si todos son necesarios o no. Los requisitos complejos pueden realizarse mediante operaciones lógicas AND y OR, que se declaran como se describe en las siguientes secciones.
+
+> Aunque se pueden combinar varios esquemas de diferentes tipos, la API debe ser coherente: No se puede utilizar la autenticación HTTP Bearer y HTTP Basic al mismo tiempo, ya que ambas utilizan la cabecera `Authentication`. Lo mismo ocurre cuando se declaran múltiples token Api, deben establecerse en diferentes parámetros en la query o las cookies, o en diferentes cabeceras.
+
+#### AND Lógico
+Cuando se aplican varios esquemas, normalmente se desea que todos ellos se cumplan para que la solicitud tenga éxito. Para ello, los esquemas deben especificarse como un objeto dentro de la propiedad `security` en el documento OpenAPI.
+
+```yaml
+security:
+  BasicAuth: []
+  ApiKeyAuth: []
+```
+
+De esta forma, según el código anterior, para realizar una petición y obtener una respuesta satisfactoria tendríamos que proporcionar una autenticación básica en la cabecera `Authentication` y un token API en la cabecera `X-Api-key` (como se ha declarado en el esquema del comienzo).
+
+#### OR lógico
+Cuando se definen muchos esquemas, es probable que se quiera emitir una respuesta satisfactoria cuando se proporciona alguno de ellos en la petición. Para ello, hay que especificar los esquemas como un array dentro de la propiedad `security` en la declaración de la OpenAPI.
+
+```yaml
+security:
+  - BasicAuth: []
+  - ApiKeyAuth: []
+  - OpenId: [read]
+  - OAuth2: [write]
+```
+
+Para obtener una solicitud exitosa de un servidor con la declaración de seguridad anterior sólo tendríamos que proporcionar uno de los tipos especificados, ya sea Basic auth, una clave API o autenticar a través de OAuth u OpenIDConnect.
+
+> NOTA: OpenID y OAuth2 tienen _scope_ (`read` y `write`), lea más sobre el _scope_ en la [documentación de OpenAPI](https://swagger.io/docs/specification/authentication/).
+
+## Security Handlers
+Cuando el middleware de seguridad está habilitado en la configuración y los esquemas de seguridad se especifican en `components` en la declaración de OpenAPI, es necesario proporcionar un manejador para cada uno de los esquemas de seguridad. Si falta un manejador o no hay esquemas de seguridad definidos, se lanzará un error en la inicialización.
+
+Los manejadores de seguridad son funciones que implementan la lógica deseada para manejar los esquemas de seguridad, como la validación de un token API para un esquema de tipo `apikey`. Se establecen en la configuración bajo `middleware.security.auth.<handler>` y el nombre del manejador debe coincidir con el del esquema de seguridad que se está manejando:
+
+```js
+// oastools.config.js
+
+module.exports = {
+  middleware: {
+    security: {
+      auth: {
+        BasicAuth: (token) => {/* Validate encoded token*/ },
+        BearerAuth: (token) => {/* Validate token */ },
+        ApikeyAuth: (token) => {/* Validate the token */ },
+        OAuth2: (secDef, secScope) => { /* OAuth authentication */ },
+        OpenID: (secDef, secScope) => { /* OAuth authentication */ }
+      }
+    }
+  }
+}
+```
+
+> Ten en cuenta que la autenticación HTTP y Apikey reciben el token proporcionado para validar en los argumentos, mientras que OAuth2 y OpenID reciben la definición del esquema de seguridad y el array de _scopes_
+
+La función del controlador puede devolver un resultado, típicamente el token decodificado en el caso de la autenticación HTTP. Este resultado se guarda en `res.locals.oas.security.<handler>` para que esté disponible para los controladores más adelante en la ejecución.

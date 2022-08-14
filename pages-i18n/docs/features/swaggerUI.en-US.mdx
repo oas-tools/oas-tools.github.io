@@ -1,0 +1,72 @@
+---
+title: SwaggerUI
+---
+
+import Callout from 'nextra-theme-docs/callout'
+
+# Swagger Interface
+<Callout type="warning" emoji="⚠">
+This feature is not available when using OpenAPI 3.1
+</Callout>
+
+## Overview
+The swagger UI is active by default in configuration. You may turn it off or configure it to be displayed in a different route (default is `/docs`).
+
+This integration of the swagger interface consists in a middleware class wrapping the [swagger-ui-express](https://www.npmjs.com/package/swagger-ui-express) package. This way, OAS Tools is able to integrate it inside its middleware chain and extend its configuration adding new options, such as the possibility of hiding endpoints from the swagger documentation.
+
+![Swagger UI](../../../public/img/swaggerui.png)
+
+## Configuration
+Thanks to the OAS Tools integration of the SwaggerUI, many configuration options are available across the project. Some of the posibilities are listed below.
+
+### Hiding endpoints
+OAS Tools offers the possibility to hide determined endpoints from the swagger interface, depending on whether the experimentals JSDoc annotations are enabled or not:
+
+#### Through the OpenAPI document
+In order to hide one or more operation from the swagger documentation, you need to add `x-swagger-ui: false` at the operation level of the OpenAPI document.
+
+```yaml
+...
+  get:  
+    x-swagger-ui: false
+    description: Some endpoint's operation    
+    responses:
+      ...
+
+```
+
+#### Using annotations _(Experimental)_
+When experimental JSDoc annotations are enabled, operations can be hidden just by adding the `@oastools {swaggerUI} false` annotation on top of the controller operation you want to hide.
+
+```js
+/**
+ * @oastools {method} POST
+ * @oastools {swaggerUI} false */
+module.exports.createUser = function createUser(req, res) {
+  varUserController.createUser(req, res);
+};
+
+```
+
+### CustomCSS
+The custom CSS is a feature already included in the express-swagger-ui package wrapped inside OAS Tools swagger middleware. You can sett customCSS from the global server configuration, under `middleware.swagger.ui.customCSS`:
+
+```json
+// .oastoolsrc
+
+{
+  "middleware": {
+    "swagger": {
+      "ui" : {
+        "customCss": ".swagger-ui .topbar { background-color: blue }"
+      }
+    }
+  }
+}
+```
+The example above would result in a swagger interface with a blue topnav:
+
+![Swagger UI blue nav](../../../public/img/swaggerui-blue.png)
+
+### More options
+More options are inherited from swagger-ui-express npm package. Please visit [their documentation](https://github.com/scottie1984/swagger-ui-express#custom-css-styles) to know all the possible config options.

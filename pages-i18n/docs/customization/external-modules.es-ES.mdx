@@ -1,0 +1,133 @@
+---
+title: Modulos Externos
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+
+# Módulos externos
+Una de las principales novedades de esta versión 3.0 es la posibilidad de integrar clases y funciones de middleware de terceros en la cadena de middleware de OAS Tools. El equipo de OAS Tools ya ha desarrollado un par de módulos que añaden funcionalidades útiles al sistema:
+* [OAS Auth](https://github.com/oas-tools/oas-auth/blob/main/README.md): Un módulo de autenticación que proporciona manejadores de seguridad y middleware para validar y asignar niveles de permiso basados en roles a partir de JSON Web Token.
+* [SLA Rate Limit](https://github.com/oas-tools/sla-rate-limit/blob/main/README.md): Módulo capaz de leer la especificación [SLA4OAI](https://sla4oai.specs.governify.io/) y limitar las peticiones al servicio en base a lo especificado en un acuerdo de nivel de servicio (ANS).
+
+## Instalación de módulos
+El middleware externo puede ser instalado a través de la función `use()` proporcionada por la biblioteca central de OAS Tools. La función `use()` toma tres argumentos:
+
+* **Middleware** _(Obligatorio)_: La clase o función de middleware importada que se está integrando en la cadena.
+* **Configuración** _(opcional)_: Un objeto que contiene la configuración del middleware que se está integrando.
+* **Prioridad** _(opcional)_: La posición de la cadena de middleware en la que se insertará. Por defecto los módulos externos se insertan en la tercera posición, justo después del middleware de validación de peticiones.
+
+<Mermaid>
+flowchart LR;
+    OAS-PARAMS(0 - Parameter \n Parser)
+    OAS-SECURITY(1 - Security \nMiddleware)
+    OAS-RQVALIDATOR(2 - Request \n Validation)
+    OAS-RPVALIDATOR(4 - Response \n Validation)
+    OAS-ROUTER(5 - Router \n Middleware)
+    EXTERNAL(3 - External \n Middleware)
+    OAS-PARAMS-->OAS-SECURITY
+    OAS-SECURITY-->OAS-RQVALIDATOR
+    OAS-RQVALIDATOR-.-EXTERNAL
+    EXTERNAL-.-OAS-RPVALIDATOR
+    OAS-RPVALIDATOR-->OAS-ROUTER
+    style EXTERNAL stroke-dasharray: 5 5,stroke-width:2px
+</Mermaid>
+
+> Ten en cuenta que si se insertan dos middleware en la misma posición, se insertarán en el mismo orden en que se llame a la función `use()`. Esto significa que si se insertan dos middleware en la posición `0`, el primero terminará en la posición `1` y el segundo en la posición `0`.
+
+El siguiente ejemplo muestra cómo se integra el middleware OAS Auth. Se está registrando en la segunda posición de la cadena de middleware.
+
+```js
+import { OASBearerJWT } from 'oas-auth/middleware';
+
+const authCfg= {acl: { secSchemeName:'route/to/permissions.json' }}
+
+oasTools.use(OASBearerJWT, authCfg, 2);
+oasTools.initialize(app).then(() => ...)
+```
+
+## Desarrollo de módulos
+Crear un nuevo middleware compatible con OAS Tools es tan fácil como declarar una función o una clase y empezar a usarla. Esto se debe a que la función `use()` acepta funciones middleware directamente, así como clases que las envuelven. Las siguientes dos secciones describen esta casuística.
+
+### Módulos básicos
+En caso de querer crear un middleware básico para OAS Tools, no es necesario declarar una nueva clase. OAS Tools acepta directamente las funciones en la función `use()`. Esto es perfecto cuando su función no requiere configuración o una operación de inicialización previa:
+
+```js
+function myCustomMiddleware (req, res, next) {
+    /* Do something */
+
+    next();
+}
+
+oasTools.use(myCustomMiddleware)
+```
+
+> Es una buena práctica declarar una función con su nombre en lugar de declarar directamente una función sin nombre dentro de `use()`. Esto se debe a que el servidor imprimirá los middlewares registrados, y por lo tanto, si su función no tiene nombre se imprimirá 'undefined'.
+
+### Módulos complejos
+En caso de que tu módulo requiera una configuración adicional, un proceso de inicialización o un registro complejo, necesitarás declarar una clase. Para facilitar esa tarea, la biblioteca Commons proporciona una clase, _OASBase_, que ya tiene la definición para funciones básicas como el registro del middleware.
+
+Al declarar tu middleware como una clase, necesitarás extender _OASBase_ y declarar una función estática `initialize` que recibe la configuración del módulo y el documento OpenAPI en sus argumentos, y devuelve una instancia de la clase.
+
+> Puedes inicializar fácilmente un nuevo módulo a través de la interfaz de línea de comandos ejecutando `oas-tools init module`. Revisa la sección [CLI](../cli)
+
+```js
+const { OASBase } = require("@oas-tools/commons");
+
+module.exports.MyMiddleware extends OASBase {
+    
+    constructor(oasFile, middleware) {
+        super(oasFile, middleware); // Call parent constructor
+    }
+
+    static initialize(oasFile, config) {
+        /* The code here will run during OAS Tools initialization */
+        
+        return new MyMiddleware(oasFile, (req, res, next) => {
+            /* The code here will run for every request */
+            
+            next();
+        })
+    }
+}
+
+```
+
+En caso de que necesite realizar un registro más complejo, puede sobreescribir la función `register()`, como se muestra a continuación:
+
+```js
+const { OASBase } = require("@oas-tools/commons");
+
+module.exports.MyMiddleware extends OASBase {
+    
+    ... 
+
+    /* Overridden */
+    register(app) {
+      /* Do something */
+      app.use(super.getMiddleware());
+    }
+}
+```
+
+### Caso especial: Interceptores
+Como se explica en la sección [Validación] (../features/validation#intercepting-responses), existe un tipo especial de middleware que es capaz de interceptar las respuestas y realizar operaciones antes de que sean enviadas al cliente. Hemos llamado a ese tipo de middleware _interceptores_ y se crean sobrescribiendo la función `res.send()` de express.
+
+Al integrar más de un interceptor en la cadena de Herramientas OAS, hay que tener en cuenta que el orden en que se ejecutarán es inverso al orden en que se registran. El siguiente diagrama de flujo describe esta situación:
+
+<Mermaid>
+flowchart LR
+    SEND0(["res.send()"])
+    SEND1(["res.send1()"])
+    SEND2(["res.send2()"])
+    SEND2-->|calls| SEND1-->|calls| SEND0
+    SEND0-.-|modified by| I1
+    I1-.->|produces| SEND1
+    SEND1-.-|modified by| I2
+    I2-.->|produces| SEND2
+    I1(Interceptor 1)
+    I2(Interceptor 2)
+    style I1 stroke-width:3px
+    style I2 stroke-width:3px
+</Mermaid>
+
+Como se muestra en el gráfico, el primer interceptor registrado es el _Interceptor1_, pero la función _send1_ producida por él se ejecuta después de la función producida por el _Interceptor2_, ya que los controladores llamarán a `res.send()`, que es sobreescrita por la función _send2_.

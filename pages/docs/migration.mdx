@@ -1,0 +1,62 @@
+---
+title: Migration
+---
+
+import Callout from 'nextra-theme-docs/callout'
+
+# Migration guide
+
+<Callout type="warning" emoji="⚠">
+OAS Tools npm package has been renamed from `oas-tools` to `@oas-tools/core`. When updating the package take into account that you have to first remove the old package through `npm remove oas-tools`, install the new with `npm install --save @oas-tools/core` and modify the imports.
+</Callout>
+
+## Updating from OAS Tools v2
+OAS Tools v3 is backwards compatible with the v2, so no changes need to be made to the code. However, if you want to use exclusive features from the v3, you need to change your code to match the OAS Tools v3 configuration and initialization.
+
+### Configuration
+Since OAS Tools is backward compatible, the old v2 options are parsed to newer options upon initialization, and for those options that have been moved to external middlewares, the modules are automatically integrated in OAS Tools (but you still need to install them through NPM). The following table relates the configuration options of OAS Tools v2 to those of the new v3:
+
+| **V2 Option** | **type** | **V3 Option** | **type** |
+|---|---|---|---|
+| `loglevel` | String | `logger.level` | String |
+| `logfile` | String | `logger.logFile` && `logger.logFilePath` | Boolean && String |
+| `customLogger` | Object | `logger.customLogger` | Object |
+| `customErrorHandling` | Boolean | `middleware.error.disable` && `middleware.error.customHandler` | Function |
+| `controllers` | String | `middleware.router.controllers` | Boolean |
+| `checkControllers` | Boolean | * V3 Controllers are always checked for existence | - |
+| `strict` | Boolean | `middleware.validator.strict` | Boolean |
+| `router` | Boolean | `middleware.router.disable` | Boolean |
+| `validator` | Boolean | `middleware.router.requestValidation` `middleware.router.responseValidation` | Boolean |
+| `oasSecurity` | Boolean | `middleware.security.disable` | Boolean |
+| `securityFile` | Object | `middleware.security.auth` | Object |
+| `oasAuth` | Boolean | * Implemented by [OAS Auth](https://github.com/oas-tools/oas-auth/blob/main/README.md) | - |
+| `grantsFile` | Object | * Implented by [OAS Auth](https://github.com/oas-tools/oas-auth/blob/main/README.md) | - |
+| `docs.apiDocs` | String | * OAS Doc is not exposed in endpoints | - |
+| `docs.apiDocsPrefix` | String | * OAS Doc is not exposed in endpoints | - |
+| `docs.swaggerUi` | String | `middleware.swagger.path` | String |
+| `docs.swaggerUiPrefix` | String | Must be included in `middleware.swagger.path` | - |
+| - | - | `packageJSON` | String |
+| - | - | `oasFile` | String |
+| - | - | `useAnnotations` | String |
+| - | - | `middleware.swagger.disable` | Boolean |
+| - | - | `middleware.swagger.ui` | Object |
+| - | - | `middleware.error.printStackTrace` | Boolean |
+
+### Initialization
+The intitialization function has been modified in the v3 to return a Promise instead of taking a callback in its arguments. However, the older initialization method is still possible and will get the v2 options parsed to v3. The new OAS Tools v3 initialization takes two arguments: express app, and optionally the configuration object. Check out the [Configuration section](./fundamentals/config) for more information.
+
+```js
+const http = require('http');
+const express = require("express");
+const oasTools = require("@oas-tools/core");
+const app = express();
+
+app.use(express.json());
+const serverPort = 8080;
+
+oasTools.initialize(app).then(() => {
+    http.createServer(app).listen(serverPort, () => console.log("Server started!"));
+})
+```
+
+> The above snippet is using CommonJS syntax, but OAS Tools v3 is fully compatible with ESM/import syntax.

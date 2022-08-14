@@ -1,0 +1,33 @@
+---
+title: Lógica de negocio
+---
+
+# Capa de lógica de negocio
+La capa de lógica de negocio en OAS Tools se implementa a través de controladores que son cargados por el middleware enrutador al momento de la inicialización. La sección [enrutamiento](../features/routing) describe cómo se cargan los controladores y cómo se puede modificar el proyecto para redirigir a otros controladores. Por defecto, cada ruta declarada en el documento OpenAPI tendrá un controlador para manejar sus peticiones.
+
+## Controladores
+Los controladores son funciones que reciben los objetos _request_ y _response_ de express para realizar una operación y devolver un resultado a través de `res.send()` o `res.status().send()`.
+
+Al escribir un controlador se debe tener en cuenta el nombre de la función exportada (más detalles en la sección de enrutamiento) y la operación que se realizará:
+
+* Las operaciones GET suelen recibir algunos parámetros. Dado que los controladores reciben los objetos `req` y `res` de express, puedes acceder a los parámetros _parseados_ a través de `res.locals.oas.params` o en caso de que quieras trabajar con los tipos en crudo recibidos por express puedes usar `req.params` en su lugar.
+
+* Las operaciones POST y PUT reciben un cuerpo de petición. Al igual que con los parámetros, el cuerpo es accesible desde `res.locals.oas.body` o `req.body`. 
+
+* Algunas peticiones pueden incluir contenido multiparte. Este contenido estará disponible en `res.locals.oas.files` o siempre que se incluya un bodyparser multiparte en la cadena de middleware.
+
+> OAS Tools es agnóstico en cuanto al contenido, lo que significa que puede recibir JSON o XML en el cuerpo de la solicitud siempre que se incluya un middleware _bodyparser_ en la primera posición de la cadena de middleware. Consulta la [configuración avanzada del proyecto](../customization/project-setup) para obtener más información sobre las posibles integraciones con otras tecnologías.
+
+```js
+// UserController.js
+
+module.exports.postUser = function post(req, res) {
+  const params = res.locals.oas?.params;
+  const body = res.locals.oas?.body;
+  const files = res.locals.oas?.files;
+
+  /* Perform some operation, like saving to a database */
+
+  res.status(201).send();
+};
+```

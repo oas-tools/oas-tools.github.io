@@ -1,0 +1,73 @@
+---
+title: Descripcion
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+import Callout from 'nextra-theme-docs/callout'
+import Bleed from 'nextra-theme-docs/bleed'
+
+# Descripción
+
+<Callout type="info" emoji="ⓘ">
+    Esta es la documentación de OAS Tools v3
+    - La documentación de OAS Tools v2 se puede encontrar en [GitHub Readme](https://github.com/oas-tools/oas-tools/blob/2.2.2/README.md).
+    - ¿Actualizando desde OAS Tools v2? Consulta la [Guía de migración](../migración).
+</Callout>
+
+## ¿Qué es OAS Tools?
+OAS Tools es un framework ligero server-side construido sobre [Express.js](http://expressjs.com/es/) para crear servicios REST que cumplan con una declaración escrita siguiendo la [especificación OpenAPI](https://www.openapis.org/).
+
+El ecosistema de OAS Tools está formado por el Núcleo, la biblioteca Commons, la interfaz de línea de comandos y los Módulos Externos, que interactúan entre sí como se muestra a continuación:
+
+<Mermaid id={"1"}>
+flowchart LR;
+    Resource(Entity \n Resource)
+    OASDoc(OpenAPI \n Document)
+    CLI(CLI)
+    subgraph NodeServer [Node.js Server]
+        direction LR
+            Core(Core) --> ExtModule(External \n Modules)
+            ExtModule --> Commons(Commons \n Library)
+            Core --> Commons
+    end
+    Resource --> CLI
+    OASDoc --> CLI
+    CLI --> NodeServer
+    style NodeServer rx:10,ry:10
+</Mermaid>
+
+- El núcleo de OAS Tools contiene módulos capaces de realizar operaciones de validación y enrutamiento que proporcionan la funcionalidad necesaria para que un servidor HTTP funcione según lo especificado en el documento OpenAPI.
+
+- La [biblioteca Commons](https://github.com/oas-tools/oas-commons) contiene funciones y clases auxiliares que ayudan a desarrollar nuevos módulos fácilmente integrables dentro del ecosistema de OAS Tools. Estos módulos son clases que envuelven una función de middleware que se registran en la cadena Express subyacente. Consulta la [sección de personalización](../customization/installing-modules) para una explicación más profunda sobre cómo desarrollar e instalar módulos externos.
+
+- La Interfaz de línea de comandos permite al usuario crear rápidamente nuevos servicios REST con el núcleo de OAS Tools bajo el capó. Además, la CLI proporciona funciones para crear nuevos módulos externos a partir del documento OpenAPI o incluso de un recurso de entidad. También se puede generar un espacio de trabajo completo con todas las herramientas necesarias para el desarrollo del proyecto a través de la línea de comandos. Consulta la [documentación del CLI](../cli) para más información.
+
+## Cadena de middleware
+La biblioteca central de OAS Tools proporciona un conjunto de funciones middleware que se registran bajo la cadena de middleware de Express.js. Estos middleware se registran para cada ruta especificada en el documento OpenAPI, excepto la [Interfaz de Swagger](../features/swaggerUI) y el [Error Handler](../features/error-handling), que se registran en rutas diferentes.
+
+<Mermaid id={"2"}>
+flowchart LR;
+    REQUEST[Request]
+    OAS-PARAMS(Parameter \n Parser)
+    OAS-SECURITY(Security \nMiddleware)
+    OAS-VALIDATOR(Request/Response \n Validation)
+    OAS-ROUTER(Router \n Middleware)
+    ERRORH(Error \n Handler)
+    SWAGGERUI(Swagger \n Interface)
+    REQUEST -- /path --> OAS-PARAMS
+    REQUEST -- /docs --> SWAGGERUI
+    REQUEST -- / --> ERRORH
+    OAS-PARAMS-->OAS-SECURITY
+    OAS-SECURITY-->OAS-VALIDATOR
+    OAS-VALIDATOR-->OAS-ROUTER
+</Mermaid>
+
+Las funciones registradas bajo `/{path}` son las que proporcionan la funcionalidad a las características de OpenAPI v3, mientras que la SwaggerUI y el Error handler se utilizan para la documentación y el manejo de errores, respectivamente.
+
+- **Parameter parser**: Soporta la [serialización de parámetros](https://swagger.io/docs/specification/serialization/) de OpenAPI v3.X, es capaz de leer los parámetros (incluyendo el cuerpo) especificados para cada ruta y parsearlos al tipo indicado en el campo `schema`. Una vez leídos y convertidos los parámetros, los pasa a través de `res.locals` para que estén disponibles para la ejecución del siguiente middleware.
+
+- **Middleware de seguridad**: Se encarga de validar los `securitySchemes` especificados en el documento OpenAPI. Por defecto, comprueba su existencia, pero se pueden realizar más validaciones a través de funciones "handler". Consulta la [sección de seguridad](../features/security) para más información.
+
+- **Validador**: Realiza validaciones a las peticiones y respuestas de acuerdo a lo declarado en el documento OpenAPI. Se basa en el validador de esquemas JSON [AJV](https://ajv.js.org/). Revisa la sección [validación](../features/validation) para una explicación más profunda de cómo se validan las peticiones y las respuestas.
+
+- **Router**: Se encarga de redirigir el flujo de ejecución al controlador correspondiente. En la sección [routing](../features/routing) se explica cómo se realiza el enrutamiento.

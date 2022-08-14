@@ -1,0 +1,64 @@
+---
+title: Migración
+---
+
+import Callout from 'nextra-theme-docs/callout'
+
+# Guía de migración
+
+<Callout type="warning" emoji="⚠">
+El paquete npm OAS Tools ha sido renombrado de `oas-tools` a `@oas-tools/core`. Al actualizar el paquete hay que tener en cuenta que primero hay que eliminar el paquete antiguo mediante `npm remove oas-tools`, instalar el nuevo con `npm install --save @oas-tools/core` y modificar las importaciones.
+</Callout>
+
+## Actualizando desde OAS Tools v2
+OAS Tools v3 es retrocompatible con la v2, por lo que no es necesario hacer cambios en el código. Sin embargo, si quieres utilizar características exclusivas de la v3 necesitas cambiar tu código para que coincida con la configuración e inicialización de OAS Tools v3.
+
+### Configuración
+Dado que OAS Tools es compatible con versiones anteriores, las antiguas opciones de la v2 se convierten a opciones más nuevas en el momento de la inicialización, y en el caso de las opciones que se han trasladado a middlewares externos, los módulos se integran automáticamente en OAS Tools (pero sigue siendo necesario instalarlos a través de NPM). La siguiente tabla relaciona las opciones de configuración de OAS Tools v2 con las de la nueva v3:
+
+
+Traducción realizada con la versión gratuita del traductor www.DeepL.com/Translator
+| **Opción de V2** | **tipo** | **Opción de V3** | **tipo** |
+|---|---|---|---|
+| `loglevel` | String | `logger.level` | String |
+| `logfile` | String | `logger.logFile` && `logger.logFilePath` | Boolean && String |
+| `customLogger` | Object | `logger.customLogger` | Object |
+| `customErrorHandling` | Boolean | `middleware.error.disable` && `middleware.error.customHandler` | Function |
+| `controllers` | String | `middleware.router.controllers` | Boolean |
+| `checkControllers` | Boolean | * V3 Controllers are always checked for existence | - |
+| `strict` | Boolean | `middleware.validator.strict` | Boolean |
+| `router` | Boolean | `middleware.router.disable` | Boolean |
+| `validator` | Boolean | `middleware.router.requestValidation` `middleware.router.responseValidation` | Boolean |
+| `oasSecurity` | Boolean | `middleware.security.disable` | Boolean |
+| `securityFile` | Object | `middleware.security.auth` | Object |
+| `oasAuth` | Boolean | * Implemented by [OAS Auth](https://github.com/oas-tools/oas-auth/blob/main/README.md) | - |
+| `grantsFile` | Object | * Implented by [OAS Auth](https://github.com/oas-tools/oas-auth/blob/main/README.md) | - |
+| `docs.apiDocs` | String | * OAS Doc is not exposed in endpoints | - |
+| `docs.apiDocsPrefix` | String | * OAS Doc is not exposed in endpoints | - |
+| `docs.swaggerUi` | String | `middleware.swagger.path` | String |
+| `docs.swaggerUiPrefix` | String | Must be included in `middleware.swagger.path` | - |
+| - | - | `packageJSON` | String |
+| - | - | `oasFile` | String |
+| - | - | `useAnnotations` | String |
+| - | - | `middleware.swagger.disable` | Boolean |
+| - | - | `middleware.swagger.ui` | Object |
+| - | - | `middleware.error.printStackTrace` | Boolean |
+
+### Inicialización
+La función de inicialización ha sido modificada en la v3 para devolver una Promise en lugar de tomar un callback en sus argumentos. Sin embargo, el antiguo método de inicialización sigue siendo posible y obtendrá las convertirá las opciones de la v2 a la v3. La nueva inicialización de OAS Tools v3 toma dos argumentos: la instancia express, y opcionalmente el objeto de configuración. Consulta la sección [Configuración](./fundamentals/config) para más información.
+
+```js
+const http = require('http');
+const express = require("express");
+const oasTools = require("@oas-tools/core");
+const app = express();
+
+app.use(express.json());
+const serverPort = 8080;
+
+oasTools.initialize(app).then(() => {
+    http.createServer(app).listen(serverPort, () => console.log("Server started!"));
+})
+```
+
+> El fragmento anterior utiliza la sintaxis de CommonJS, pero OAS Tools v3 es totalmente compatible con la sintaxis ESM/import.

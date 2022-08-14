@@ -1,0 +1,323 @@
+---
+title: Project Setup
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+import Callout from 'nextra-theme-docs/callout'
+import Bleed from 'nextra-theme-docs/bleed'
+
+# Project Setup
+<Callout type="info" emoji="ⓘ">
+This section provides a more detailed approach on how to setup an OAS Tools project. Use the [Configuration section](../fundamentals/config) to complement the information on this page.
+</Callout>
+
+## Adding a service layer
+The service layer is an architectural pattern applied within the object-oriented programming paradigm, which goal is to provide a higher abstraction layer over application's bussiness logic.
+
+<Mermaid>
+flowchart TB
+    subgraph servicelayer [Service layer]
+        subgraph domainmodel [Domain model]
+            subgraph datasource [Data source layer]
+                db[(   )]
+            end
+        end
+    end
+    style servicelayer rx:50,ry:50
+    style domainmodel rx:35,ry:35
+    style datasource rx:20,ry:20
+</Mermaid>
+
+In order to add a service layer in an OAS Tools service, create a directory containing your services and delegate the controlers' logic to them. The services must receive the request and response from the controllers. For example, the following controller would look like below when using a service layer:
+
+```js
+//Controller.js
+
+const service = require('./service'); // import your service
+
+module.exports.controllerGet = function controllerGet(req, res) {
+  service.get(req, res); // Delegate functionality, passing req, res
+};
+```
+
+Then, the corresponding service must export a `get` function that receives the request and response:
+
+```js
+//Service.js
+
+module.exports.get = function serviceGet(req, res) {
+    /* Business logic here */
+    res.status(200).send(/* Response body */)
+};
+```
+
+## Integrations
+Since OAS Tools is a lightweight, flexible framework, many technologies may be integrated when developing a new service. Below are listed some of the most commons integrations when developing REST services.
+
+### Express body parser
+
+OAS Tools is content agnostic, meaning it could receive JSON, XML or any other in request body as long as a body parser middleware is included in the first position of the middleware chain.
+
+```js
+//index.js
+
+const http = require('http');
+const app = require("express");
+const oasTools = require("@oas-tools/core");
+const app = express();
+
+const xml = require('express-xml-bodyparser');
+const multer = require('multer');
+
+app.use(express.json()); // JSON bodyparser
+app.use(express.urlencoded()); // URL encoded
+app.use(xml()); // XML bodyparser
+app.use(multer({/* multer config */})); // Multipart requests
+
+var serverPort = 8080;
+
+oasTools.initialize(app).then(() => {
+    http.createServer(app).listen(serverPort, () => console.log("Server started!"));
+})
+```
+
+### Databases
+OAS Tools architecture allows the integration with any database in the data source layer.
+
+#### NoSQL Database - Mongoose
+MongoDB is the most common database when it comes to developing services with Node.js. In order to connect to a mongo database we use [mongoose](https://mongoosejs.com), an OOP library that creates the connection between MongoDB and Node.js runtime environment. To integrate mongoose with OAS Tools, just create the connection before OAS Tools initialization, declare some models and use them in the controllers:
+
+1. Install mongoose:
+
+```
+npm i --save mongoose
+```
+
+2. Create the database connection and initialize the server after it successfully connects:
+
+```js
+// index.js
+
+const http = require('http');
+const express = require("express");
+const oasTools = require("@oas-tools/core");
+const mongoose = require('mongoose');
+
+// Mongo connection variables
+const mongoPort = process.env.MONGO_PORT ?? 27017;
+const mongoHost = process.env.MONGO_HOST ?? 'localhost';
+const mongoDBName = process.env.MONGO_DBNAME ?? 'defaultt-db';
+const mongoURL = `mongodb://${mongoHost}:${mongoPort}/${mongoDBName}`;
+
+mongoose.connect(mongoURL).then(async () => {
+    const app = express();
+    const serverPort = 8080;
+
+    app.use(express.json());
+    
+    await oasTools.initialize(app)
+    http.createServer(app).listen(serverPort, () => console.log("Server started!"));
+})
+```
+
+3. Declare some mongo schemas:
+
+```js
+// User.js
+
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const UserSchema = new Schema(
+  {
+    name: {
+      type: String,
+      required: true
+    },
+    birthdate: {
+      type: Date,
+      required: true
+    }
+  }
+);
+
+module.exports = mongoose.model('User', UserSchema);
+```
+
+4. Make database queries in controllers:
+
+```js
+// UserController.js
+const User = require('../models/User');
+
+module.exports.postUser = function post(req, res) {
+  const body = res.locals.oas.body;
+  const newUser = new User(body);
+
+  newUser.save().then(() => {
+      res.status(201).send();
+  }).catch((err) => {
+      res.status(500).send({error: err});
+  });
+};
+```
+
+#### Prisma ORM
+[Prisma](https://prisma.io) is an Object Relational Mapping (ORM) software built for Node.js and Typescript. In the majority of cases it is used for connecting to relational databases, typically SQL, but it is also capable of making connection to non-relational databases like MongoDB. To integrate it with OAS Tools, create a folder containing the entrypoint for the prisma client and a file for the schemas:
+
+1. Create prisma entrypoint
+```js
+// prisma/index.js
+
+const { PrismaClient } = require('@prisma/client');
+module.exports = new PrismaClient();
+```
+
+2. Create `schema.prisma` file containing the models and the database connection URL, in this case we will connect to a PostgreSQL database:
+```prisma
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // environment variable
+}
+
+model User {
+  id          Int @id @default(autoincrement())
+  name        String  @db.VarChar(20)
+  birthDate   DateTime?
+}
+```
+
+3. Make queries to the database in controllers
+```js
+const prisma = require('../prisma');
+
+module.exports.postUser = function post(req, res) {
+  prisma.user.create({
+    data: res.locals.oas.body
+  })
+    .then(rentals => {
+      res.status(201).send();
+    })
+    .catch(err => {
+      res.status(500).send({error: err});
+    });
+};
+```
+
+4. Optionally, you can add scripts in `package.json` to generate schemas and create migrations:
+```json
+// package.json
+
+{
+    ...
+    "scripts": {
+        "generate-schema": "npx prisma generate",
+        "prisma-migrate": "npm run generate-schema && npx prisma migrate deploy",
+    }
+}
+```
+> Check the [prisma documentation](https://www.prisma.io/docs/) for more information about the possibilities that this library offers.
+
+
+### Docker Containers
+OAS Tools can run inside a container, since it is a Node.js service. In order to get the service running into a Docker container, some modifications must be made:
+
+> You can run `npm init server <OAS Document> -d` or select the Docker option when using the CLI interactive mode in order to get the service scaffolding for it to run inside Docker containers.
+
+1. Move the entrypoint code to a new `server.js` file:
+```js
+// server.js
+
+const http = require('http');
+const express = require("express");
+const oasTools = require('oas-tools');
+
+const deploy = async () => {
+  const serverPort = 8080;
+  const app = express();
+  app.use(express.json());
+
+  oasTools.initialize(app).then(() => {
+    http.createServer(app).listen(serverPort, () => console.log("Server started!"));
+  });
+}
+
+const undeploy = () => {
+  process.exit();
+};
+
+module.exports = {
+    deploy: deploy,
+    undeploy: undeploy
+}
+```
+
+2. Modify the service entrypoint:
+```js
+//index.js
+
+const server = require('./server');
+const env = process.env.NODE_ENV ? process.env.NODE_ENV : 'production';
+
+server.deploy(env).catch(err => { console.log(err); });
+
+// quit on ctrl-c when running docker in terminal
+process.on('SIGINT', function onSigint () {
+  console.log(`[${new Date().toISOString()}] Got SIGINT (aka ctrl-c in docker). Graceful shutdown`);
+  shutdown();
+});
+
+// quit properly on docker stop
+process.on('SIGTERM', function onSigterm () {
+  console.log(`[${new Date().toISOString()}] Got SIGTERM (docker container stop). Graceful shutdown`);
+  shutdown();
+});
+
+const shutdown = () => {
+  server.undeploy();
+};
+```
+
+3. Create a `Dockerfile`:
+```docker
+# Dockerfile
+
+FROM node:16.13.0-alpine3.14
+
+WORKDIR /opt/app
+
+COPY . .
+
+RUN npm install --only=prod
+
+ARG NODE_ENV=production
+ENV NODE_ENV $NODE_ENV
+
+ARG PORT=80
+ENV PORT $PORT
+EXPOSE $PORT
+
+CMD [ "node", "index.js" ]
+```
+
+4. Optionally, create a `.dockerignore`:
+```
+*Dockerfile*
+*docker-compose*
+*.log
+*.md
+.env*
+.git
+.github
+tests
+node_modules
+```
+
+Once these changes are made, you can run `docker build .` and get your new container with OAS Tools.

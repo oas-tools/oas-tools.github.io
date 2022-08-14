@@ -1,0 +1,46 @@
+---
+title: Logger personalizado
+---
+
+# Logger personalizado
+
+OAS Tools proporciona un logger integrado que se basa en un logger [winston](https://www.npmjs.com/package/winston). Esta clase Logger integrada se construye por composición, lo que significa que la instancia winston subyacente puede ser sobrescrita.
+
+## Creación de un logger personalizado
+Como se mencionó anteriormente, el logger personalizado debe ser una instancia de winston. El ejemplo de abajo mostrará cómo crear un logger simple con esta biblioteca, pero se pueden lograr diseños más complejos, consulte la [documentación de winston](https://github.com/winstonjs/winston#table-of-contents).
+
+Habiendo instalado winston a través de `npm install --save winston`, puedes crear un logger simple usando la función `createLogger`:
+
+```js
+// logger.js
+
+const winston = require('winston');
+
+module.exports = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  defaultMeta: { service: 'user-service' },
+  transports: [
+    new winston.transports.Console({
+        format: winston.format.simple(),
+    })
+  ]
+});
+```
+
+## Integración del logger
+Para integrar el nuevo logger dentro de su servicio OAS Tools, sólo tiene que importar su clase bajo la propiedad `logger.customLogger` dentro del archivo de configuración:
+
+```js
+// oastools.config.js
+
+const logger = require('./logger');
+
+module.exports = {
+    logger: {
+        customLogger: logger
+    }
+}
+```
+
+> Tenga en cuenta que al establecer un logger personalizado se ignorarán el resto de opciones de registro.

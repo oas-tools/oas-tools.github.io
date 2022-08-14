@@ -1,0 +1,177 @@
+---
+title: "OpenAPI file"
+---
+
+import Callout from 'nextra-theme-docs/callout'
+
+# OpenAPI file
+The OpenAPI document is the cornerstone of the OAS Tools framework, since it contains de declaration of the API service that is being implemented. By default the framework searches for it under the `/api` directory. 
+
+The following sections describes the minimal fields the OpenAPI document must contain in order to work with OAS Tools.
+
+## Basic OAS Document
+<Callout type="info" emoji="ⓘ">
+    The sections below are meant to be a basic guide on how to write a minimal OpenAPI declaration. There are plenty of more options, fields and parameters that can be added to the document. Check out the [OpenAPI spec docs](https://swagger.io/docs/specification/about/) for more information.
+</Callout>
+
+### OpenAPI version
+OAS Tools supports OpenAPI version 3.0 as well as 3.1. That version is specified on the root level under the `openapi` field, like shown:
+
+```yaml
+openapi: 3.0.3 # allows 3.0.X and 3.1.X
+info: ...
+```
+
+There are some differences between version 3.0 and 3.1, mainly because of the compatibility with JSON schema. Some of the differences are described below. Read [this article](https://www.openapis.org/blog/2021/02/16/migrating-from-openapi-3-0-to-3-1-0) by the OpenAPI mantainers to know all the differences between both versions.
+
+#### OpenAPI 3.0
+* It is based on [JSON Schema Draft 05](https://json-schema.org/specification-links.html#draft-5).
+
+* Only one type can be specified within the `type` field under a `schema` definition, making necessary the use of `nullable` keyword when a type could be null.
+
+```yaml
+# OpenAPI 3.0
+
+schema:
+    type: string
+    nullable: true
+```
+
+#### OpenAPI 3.1
+* It is based in the latest JSON Schema version, [Draft 2020-12](https://json-schema.org/draft/2020-12/release-notes.html). Since OpenAPI is a superset built over JSON Schema, all the features in this draft are now usable in the OpenAPI declaration.
+
+* Multiple types can be specified inside an array within the `type` field, making `nullable` redundant.
+
+```yaml
+# OpenAPI 3.1
+
+schema:
+    type:
+    - 'string'
+    - 'null'
+```
+
+* OpenAPI is entirely compatible with JSON Schema because it is now a JSON Schema dialect, so by default any schema is using `$schema: "https://spec.openapis.org/oas/3.1/dialect/base"` dialect. If you split your schemas into other JSON/YAML files and use $ref to point to them, they could contain a different `$schema` and override this default, making it easier for mantainers since now schemas can reference the draft they are based on.
+
+```yaml
+{
+   $schema: "http://json-schema.org/draft-07/schema#",
+}
+```
+
+### Info object
+This object is required in the OpenAPI schema. It provides metadata information about the service that is being described. That metadata must contain title and service version, and optionally it may contain a description, contact information, the license and the terms of use.
+
+```yaml
+info:
+    title: Your API name
+    version: "v1.0.0" # The version of your API, not OpenAPI version
+    description: OPTIONAL description
+    termsOfService: OPTIONAL URL to the terms of service
+    contact: # OPTIONAL contact object
+        name: ISA
+        url: https://isa.us.es
+        email: isa@example.us.es
+    license: # OPTIONAL license object
+        name: MIT
+        url: https://opensource.org/licenses/MIT
+
+```
+
+### Paths object
+This object contains the paths for each of the endpoints that the API has. Each path contains an object that describes the service operations (GET, POST, PUT, DELETE...) or a reference to it.
+
+For each operation described, it is required to specify a description and the responses the server may give to that operation. You may also include a description of the params or the request body, if any.
+
+```yaml
+paths:
+  api/v1/entity:
+    $ref: entity-doc.yaml # Reference to other file
+  api/v1/entity/{id}:
+    delete:
+      description: Removes entity by id
+      responses:
+        204:
+          description: Entity removed
+```
+
+## Showcase
+Knowing the basics of the OpenAPI declaration, we could wrap up all the sections above to try declare an API service with the following specs:
+* OpenAPI version 3.1
+* Service name should be OpenAPI server, version v1.0.0-beta.1
+* MIT licensed
+* One resource, called Users, with GET, POST and DELETE operations
+* Create one file for the Users only
+* Users may be null
+
+To meet these requirements, we first need to create two files. We will create a file named `main.yaml` that contains the general API declaration, and anothr file `user-doc.yaml` that contains the endpoint declaration for the Users resource.
+
+```yaml
+# main.yaml
+
+openapi: 3.1.0
+info:
+    title: OpenAPI server
+    version: "v1.0.0-beta.1"
+    license: # OPTIONAL license object
+        name: MIT
+        url: https://opensource.org/licenses/MIT
+paths:
+    /api/v1/users:
+        $ref: user-doc.yaml#/api-v1-users
+    /api/v1/users/{id}:
+        $ref: user-doc.yaml#/api-v1-users-id
+```
+
+Then we write the user endpoints declaration in a separate file:
+
+```yaml
+# user-doc.yaml
+api-v1-users:
+  get:
+    description: Get all the users
+    responses:
+      '200':
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/user'
+
+  post:
+    description: Creates a new user
+    requestBody:
+      description: User object
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/user'
+    responses:
+      '201':
+        description: Success
+        
+api-v1-users-id:
+  delete:
+    description: Deletes user by id
+    parameters:
+      - name: id
+        description: User's id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      '204':
+        description: Success
+      
+# Declare a components section for reusability
+components:
+  user:
+    schema:
+      type: [ "object", "null" ]
+```
+
+Now the service has been declared according to the requirements, try using the [CLI](../cli) to generate the code and test it out!

@@ -1,0 +1,58 @@
+---
+image:  oastools3.png
+description: 'La nueva versión de OAS Tools ya ha sido lanzada. ¡Conoce todas las novedades de OAS Tools v3.0!'
+date: 2021-08-09T00:00:00.000Z
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+
+# Nuevo OAS Tools v3!
+
+![Swagger UI blue nav](../../../public/blog/oastools3.png)
+
+Después de un período de inactividad sin grandes lanzamientos, OAS Tools v3 por fin ha salido. El proyecto se ha reanudado después de estar interrumpido durante más de un año.
+
+El proyecto ha sufrido muchos cambios, entre ellos la creación de una organización GitHub donde se encuentran los repositorios creados por el equipo. Este cambio se debe principalmente a la enorme tarea de refactorización que se ha realizado dentro de la biblioteca central del sistema.
+
+La antigua biblioteca OAS Tools se ha dividido en varios paquetes, incluyendo una interfaz por línea de comandos y una biblioteca Commons. El paquete principal contiene la funcionalidad principal que ayuda a implementar las características de OpenAPI 3.X, mientras que la biblioteca Commons y la CLI ayudan a crear nuevos módulos y servicios.
+
+## Extensible a través de módulos externos
+La biblioteca Commons proporciona una funcionalidad útil que ha ayudado a desarrollar la propia biblioteca central de OAS Tools, y también ayuda a desarrollar nuevos módulos que pueden ampliar la funcionalidad de OAS Tools.
+
+<Mermaid id={"1"}>
+flowchart LR;
+    Core(OAS Tools \n Core) -----> ExtModule(External \n Modules)
+    ExtModule -----> Commons(Commons \n Library)
+    Core -----> Commons
+</Mermaid>
+
+Estos nuevos paquetes se integran dentro del flujo de ejecución, abriendo el abanico de posibilidades a la hora de inicializar un servidor basado en la especificación OpenAPI. Gracias a esta característica, es posible crear validadores para nuevos estándares, complejos módulos de autenticación o incluso paquetes de telemetría.
+
+Aunque pueda parecer difícil desarrollar un nuevo módulo completo para OAS Tools, resulta ser una tarea realmente fácil. ¡Gracias a la nueva interfaz de línea de comandos que es capaz de generar la estructura de código para crear cualquier tipo de módulo!
+
+## Línea de comandos interactiva
+La nueva herramienta de línea de comandos se basa en la biblioteca [inquirer](https://www.npmjs.com/package/inquirer) para ofrecer menús sencillos e interactivos que guían en la creación de muchos recursos.
+
+```sh
+? Select a resource to initialize (Use arrow keys)
+  Server
+  Module
+  Development environment
+> OpenAPI File
+```
+
+¿Prefieres insertar comandos de la manera tradicional? No te preocupes, OAS Tools CLI permite utilizar comandos con muchas opciones que te permiten configurar tu proyecto de muchas maneras. Sólo tienes que echar un vistazo a la [documentación del CLI](../../docs/cli).
+
+## Soporte para OpenAPI 3.1
+Después de algún tiempo OAS Tools es finalmente 100% compatible con OpenAPI 3.1, la última versión de OpenAPI. Dar soporte a esta nueva versión de la especificación OpenAPI ha sido un logro complicado, pero gracias a la biblioteca [AJV](https://ajv.js.org/) ya es posible validar el nuevo _JSON Schema draft 2020-12_ y por tanto, también la declaración OpenAPI 3.1.
+
+Actualice su declaración OpenAPI y descubre el nuevo framework OAS TOOLS mediante una simple línea en su documento OpenAPI.
+
+```yaml
+openapi: 3.1.0
+info:
+...
+```
+
+## Aún hay mas...
+Después de muchos meses de desarrollo, la nueva herramienta OAS ha sido lanzada, ¡pero definitivamente hay más por venir! Mantente al tanto activando la notificación para nuestra [discusión](https://github.com/orgs/oas-tools/discussions) y revisa la [documentación](../../docs/getting-started/overview) de esta nueva versión.
