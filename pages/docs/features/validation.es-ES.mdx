@@ -1,0 +1,113 @@
+---
+title: Validacion
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+import Callout from 'nextra-theme-docs/callout'
+
+# Validación
+<Callout type="info" emoji="ⓘ">
+Los errores lanzados por el middleware de validación que se explican en las secciones [Validación de peticiones](#validacion-de-peticiones) y [Validación de respuestas](#validacion-de-respuestas) de esta página son manejados por el [manejador de errores integrado](../features/error-handling) y por lo tanto el código de estado que el servidor establece para las respuestas cuando la validación es estricta (`strict`) depende de que esté habilitado.
+</Callout>
+
+## Validación del documento OpenAPI
+OAS Tools es capaz de validar un documento OpenAPI gracias a la biblioteca [Commons](https://github.com/oas-tools/oas-commons). La biblioteca commons de OAS Tools integra el validador de esquemas JSON [AJV](https://ajv.js.org/), envuelto en dos funciones que validan el documento completo o una parte del mismo.
+
+Al estar el validador integrado en Commons, es reutilizable y puede ser llamado desde diferentes middleware y herramientas, como la línea de comandos o los middlewares validadores de peticiones y respuestas.
+
+OAS Tools realizan una validación del documento OpenAPI completo en el momento de la inicialización con el fin de evitar errores. En caso de que el archivo no sea válido, el error de validación lanzado por AJV se imprime formateado correctamente a través del logger incorporado.
+
+Esta sería la salida en caso de que faltara la propiedad requerida 'title' dentro de `info`:
+
+```
+2022-08-13 12:08:74 [oas-tools] ERROR: ValidationError: Specification file does not meet OpenAPI 3.0.0 schema.
+- Validation failed at /info > must have required property 'title'
+```
+
+## Validacion de peticiones
+La validación de la solicitud es una función middleware que se basa en las funciones de validación de la biblioteca commons para comprobar partes específicas del documento OpenAPI, más concretamente comprueba los parámetros y el cuerpo de la solicitud contra la declaración OpenAPI.
+
+### Parámetros
+Los parámetros se validan para cada solicitud en función de lo que se haya especificado para esa operación:
+
+```yaml
+...
+/endpoint/{id}:
+  get:
+    params:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+...
+```
+
+En el fragmento anterior hemos definido una petición GET que recibe un parámetro obligatorio llamado `id`. Si hiciéramos una petición GET a `{server-url}/endpoint` obtendríamos un WARN en la consola (o un mensaje de error si se ha activado la validación estricta en la configuración) diciendo que ha habido un error de validación debido a que el parámetro `id` es obligatorio. Lo mismo ocurriría si especificáramos un id no entero, ya que está especificado que sea de ese tipo.
+
+> La validación estricta hace que el servidor responda `400 Bad Request` cuando la validación de la solicitud falla.
+
+```
+2022-08-13 12:08:64 [oas-tools] WARN: Parameter id does not match the schema specified in the OAS Document:
+- Validation failed at #/type > must be integer
+```
+
+### Cuerpo de la petición
+De forma similar a como funciona la validación de parámetros, el cuerpo de la solicitud se valida a través de las funciones de validación de la biblioteca común.
+
+```yaml
+...
+post:
+  requestBody:
+    description: Body of the request
+    required: true
+      content:
+        application/json:
+          schema:
+            type: object
+...
+```
+En este caso, estamos definiendo una petición POST con un cuerpo requerido en el que se debe incluir un objeto formateado como JSON. Si hiciéramos una petición POST sin incluir el cuerpo o incluyendo contenido distinto a un objecto, entonces el servidor imprimiría una advertencia en consola o en caso de que la validación `estricta` esté activa, respondería con `400 Bad Request`.
+
+## Validación de respuestas
+El middleware de validación de respuestas es una función especial capaz de interceptar las respuestas, validarlas y luego enviarlas al cliente. Aunque esta función realiza la validación después de que se ejecute `res.send()`, debe registrarse en la cadena de middleware antes de que se llame a `res.send()`, por eso se registra antes del middleware del enrutador (consulta el diagrama de la [sección de enrutamiento](./routing)):
+
+<Mermaid id={"2"}>
+flowchart LR;
+    OAS-PARAMS(Parameter \n Parser)
+    OAS-SECURITY(Security \nMiddleware)
+    OAS-RQVALIDATOR(Request \n Validator)
+    OAS-RPVALIDATOR(Response \n Validator)
+    OAS-ROUTER(Router \n Middleware)
+    OAS-PARAMS-->OAS-SECURITY
+    OAS-SECURITY-->OAS-RQVALIDATOR
+    OAS-RQVALIDATOR-->OAS-RPVALIDATOR
+    OAS-RPVALIDATOR-->OAS-ROUTER
+    style OAS-RPVALIDATOR stroke-width:3px
+</Mermaid>
+
+### Interceptando respuestas
+Como se ha explicado anteriormente, el validador de respuestas se registra antes del middleware Router que llama a `res.send()` a través de los controladores. Sin embargo, este middleware es un _interceptor_, lo que significa que debe leer las respuestas enviadas al cliente, validar el contenido y enviar una nueva respuesta al cliente (o la misma si es válida). 
+
+Para que este middleware pueda interceptar las respuestas, la función `res.send()` se sobrescribe de manera que las validaciones se realicen en primer lugar, y luego se llama a la función de envío original:
+
+```js
+const oldSend = res.send;
+res.send = (response) => {   
+    /* response validation */
+
+    oldSend.call(res, newResponse);
+}
+```
+
+### Validación del contenido
+En el caso del contenido de la respuesta, no sólo es necesario validar el contenido en sí mismo contra el esquema, sino también comprobar que el `content-type` coincide con la cabecera `Accept` establecida en las peticiones.
+
+El contenido de la respuesta se valida igual que el cuerpo de la petición. Su declaración debe existir en el campo `responses` de cada operación especificada en el documento OpenAPI. Entonces el middleware comprobará los datos de la respuesta contra el esquema antes de ser enviados al cliente, e imprimirá un mensaje de advertencia o de error (cuando `strict` está activo) en caso de que el contenido no sea válido. 
+
+> Si `strict` está activo y el servidor lanza un error de validación de la respuesta debido a un contenido no válido, responderá con un `500 Internal server error` ya que las respuestas se establecen en los controladores del servidor y por lo tanto, es un error del servidor.
+
+El middleware también comprobará el MIMEType del `content-type` de la respuesta contra la cabecera `Accept` establecida en la petición de forma que si el `content-type` de la respuesta no es aceptado y la validación está establecida en `strict`, el servidor responderá con `406 Not Accepted`, o imprimirá un mensaje de advertencia. En caso de que no se proporcione ninguna cabecera `Accept` en la petición, el servidor asumirá el tipo `*/*` como cualquier tipo de contenido válido en la respuesta para esa petición.
+
+> Si no se establece ningún tipo de contenido para la respuesta, OAS Tools asumirá que es `application/json;charset=utf-8`. 

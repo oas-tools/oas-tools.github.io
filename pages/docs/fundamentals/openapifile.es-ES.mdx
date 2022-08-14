@@ -1,0 +1,177 @@
+---
+title: "Archivo OpenAPI"
+---
+
+import Callout from 'nextra-theme-docs/callout'
+
+# Archivo OpenAPI
+El documento OpenAPI es la piedra angular de OAS Tools, ya que contiene la declaración del servicio API que se está implementando. Por defecto el framework lo busca en el directorio `/api`. 
+
+Las siguientes secciones describen los campos mínimos que debe contener el documento OpenAPI para poder funcionar utilizando OAS Tools.
+
+## Documento OpenAPI Básico
+<Callout type="info" emoji="ⓘ">
+    Las secciones siguientes pretenden ser una guía básica sobre cómo escribir una declaración OpenAPI mínima. Hay muchas más opciones, campos y parámetros que se pueden añadir al documento. Consulta la [documentación de OpenAPI](https://swagger.io/docs/specification/about/) para obtener más información.
+</Callout>
+
+### versión de OpenAPI
+OAS Tools soporta tanto la versión 3.0 de OpenAPI como la 3.1. Esta versión se especifica en el nivel raíz del documento, a través del campo `openapi`, como se muestra a continuación:
+
+```yaml
+openapi: 3.0.3 # allows 3.0.X and 3.1.X
+info: ...
+```
+
+Existen algunas diferencias entre la versión 3.0 y la 3.1, principalmente debido a la compatibilidad con JSON schema. Algunas de estas diferencias se describen a continuación. Puedes leer [este artículo](https://www.openapis.org/blog/2021/02/16/migrating-from-openapi-3-0-to-3-1-0) escrito por los responsables de OpenAPI para conocer todas las diferencias entre ambas versiones.
+
+#### OpenAPI 3.0
+* Se basa en el [JSON Schema Draft 05](https://json-schema.org/specification-links.html#draft-5).
+
+* Sólo se puede especificar un tipo dentro del campo `type` cuando se declara un `schema`, lo que hace necesario el uso de la palabra clave `nullable` cuando un tipo pueda ser nulo.
+
+```yaml
+# OpenAPI 3.0
+
+schema:
+    type: string
+    nullable: true
+```
+
+#### OpenAPI 3.1
+* Se basa en la última versión de JSON Schema, [Draft 2020-12](https://json-schema.org/draft/2020-12/release-notes.html). Dado que OpenAPI es un superconjunto construido sobre JSON Schema, todas las características de esta versión son ahora utilizables en la declaración de OpenAPI.
+
+* Se pueden especificar múltiples tipos a través de un array dentro del campo `type`, haciendo que `nullable` sea redundante.
+
+```yaml
+# OpenAPI 3.1
+
+schema:
+    type:
+    - 'string'
+    - 'null'
+```
+
+* OpenAPI es totalmente compatible con JSON Schema dado que ahora es un dialecto de este, así que por defecto cualquier esquema utiliza el dialecto `$schema: "https://spec.openapis.org/oas/3.1/dialect/base"`. Si divide sus esquemas en otros archivos JSON/YAML y utiliza $ref para apuntar a ellos, podrían contener un `$schema` diferente y anular este valor por defecto, facilitando el trabajo a los mantenedores ya que ahora los esquemas pueden hacer referencia a la versión en la que se basan.
+
+```yaml
+{
+   $schema: "http://json-schema.org/draft-07/schema#",
+}
+```
+
+### Objeto Info
+Este objeto es necesario en el esquema OpenAPI. Proporciona metadatos sobre el servicio que se está describiendo. Estos metadatos deben contener el título y la versión del servicio, y opcionalmente pueden contener una descripción, información de contacto, la licencia y las condiciones de uso.
+
+```yaml
+info:
+    title: Your API name
+    version: "v1.0.0" # The version of your API, not OpenAPI version
+    description: OPTIONAL description
+    termsOfService: OPTIONAL URL to the terms of service
+    contact: # OPTIONAL contact object
+        name: ISA
+        url: https://isa.us.es
+        email: isa@example.us.es
+    license: # OPTIONAL license object
+        name: MIT
+        url: https://opensource.org/licenses/MIT
+
+```
+
+### Objeto paths
+Este objeto contiene las rutas para cada uno de los enpoints que tiene la API. Cada ruta contiene un objeto que describe las operaciones del servicio (GET, POST, PUT, DELETE...) o una referencia a él.
+
+Para cada operación descrita, es necesario especificar una descripción y las respuestas que el servidor puede dar a esa operación. También puede incluir una descripción de los params o del cuerpo de la petición, si lo hay.
+
+```yaml
+paths:
+  api/v1/entity:
+    $ref: entity-doc.yaml # Reference to other file
+  api/v1/entity/{id}:
+    delete:
+      description: Removes entity by id
+      responses:
+        204:
+          description: Entity removed
+```
+
+## Caso práctico
+Conociendo los fundamentos de la declaración OpenAPI, podríamos agrupar las secciones anteriores para intentar declarar un servicio API con las siguientes características:
+* OpenAPI versión 3.1
+* El nombre del servicio debe ser servidor OpenAPI, versión v1.0.0-beta.1
+* Licenciado bajo MIT
+* Un recurso, llamado Usuarios, con operaciones GET, POST y DELETE
+* Un archivo separado para la declaración de usuarios
+* Los usuarios pueden ser nulos
+
+Para cumplir con estos requisitos, primero tenemos que crear dos archivos. Crearemos un archivo llamado `main.yaml` que contiene la declaración general de la API, y otro archivo `user-doc.yaml` que contiene la declaración los endpoints para el recurso Users.
+
+```yaml
+# main.yaml
+
+openapi: 3.1.0
+info:
+    title: OpenAPI server
+    version: "v1.0.0-beta.1"
+    license: # OPTIONAL license object
+        name: MIT
+        url: https://opensource.org/licenses/MIT
+paths:
+    /api/v1/users:
+        $ref: user-doc.yaml#/api-v1-users
+    /api/v1/users/{id}:
+        $ref: user-doc.yaml#/api-v1-users-id
+```
+
+Luego escribimos la declaración de los endpoints del usuario en un archivo separado:
+
+```yaml
+# user-doc.yaml
+api-v1-users:
+  get:
+    description: Get all the users
+    responses:
+      '200':
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/user'
+
+  post:
+    description: Creates a new user
+    requestBody:
+      description: User object
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/user'
+    responses:
+      '201':
+        description: Success
+        
+api-v1-users-id:
+  delete:
+    description: Deletes user by id
+    parameters:
+      - name: id
+        description: User's id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      '204':
+        description: Success
+      
+# Declare a components section for reusability
+components:
+  user:
+    schema:
+      type: [ "object", "null" ]
+```
+
+Ahora que el servicio se ha declarado de acuerdo con los requisitos, prueba a utilizar la [Interfaz por línea de comandos](../cli) para generar el código y probarlo.

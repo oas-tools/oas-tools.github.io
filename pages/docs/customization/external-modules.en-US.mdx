@@ -1,0 +1,133 @@
+---
+title: External Modules
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+
+# External modules
+One of the major new features coming out with this version 3.0 is the possibility to integrate third-party middleware classes and functions into the OAS Tools middleware chain. The OAS Tools' team has already developed a couple of modules that add useful functionalities to the system:
+* [OAS Auth](https://github.com/oas-tools/oas-auth/blob/main/README.md): An authentication module that provides security handlers and middleware to validate and assign role-based permission levels based on JSON Web Token.
+* [SLA Rate Limit](https://github.com/oas-tools/sla-rate-limit/blob/main/README.md): A Module capable of reading [SLA4OAI](https://sla4oai.specs.governify.io/) specification and limit the requests to the service based on what has been specified in a service-level agreement (SLA).
+
+## Installing modules
+External middleware can be installed through the `use()` function provided by the OAS Tools core library. The `use()` function takes three arguments:
+
+* **Middleware** _(Required)_: The imported middleware class or function that is being integrated into the chain.
+* **Configuration** _(optional)_: An object containing the configuration for the middleware that is being integrated.
+* **Priotity** _(optional)_: The position of the middleware chain in which it will be inserted. By default external modules are inserted in the third position, right after the request validation middleware.
+
+<Mermaid>
+flowchart LR;
+    OAS-PARAMS(0 - Parameter \n Parser)
+    OAS-SECURITY(1 - Security \nMiddleware)
+    OAS-RQVALIDATOR(2 - Request \n Validation)
+    OAS-RPVALIDATOR(4 - Response \n Validation)
+    OAS-ROUTER(5 - Router \n Middleware)
+    EXTERNAL(3 - External \n Middleware)
+    OAS-PARAMS-->OAS-SECURITY
+    OAS-SECURITY-->OAS-RQVALIDATOR
+    OAS-RQVALIDATOR-.-EXTERNAL
+    EXTERNAL-.-OAS-RPVALIDATOR
+    OAS-RPVALIDATOR-->OAS-ROUTER
+    style EXTERNAL stroke-dasharray: 5 5,stroke-width:2px
+</Mermaid>
+
+> Take into account that if two middleware are being inserted at the same position, they will be inserted in the same order in which the `use()` function is called. That means if two middleware are being inserted at position `0`, the first one will end up in position `1` and the second one in position `0`.
+
+The following example shows how the OAS Auth middleware is integrated. It is being registered in the second position of the middleware chain.
+
+```js
+import { OASBearerJWT } from 'oas-auth/middleware';
+
+const authCfg= {acl: { secSchemeName:'route/to/permissions.json' }}
+
+oasTools.use(OASBearerJWT, authCfg, 2);
+oasTools.initialize(app).then(() => ...)
+```
+
+## Developing modules
+Creating new OAS Tools' compatible middleware is as easy as declaring a function or a clase and start using it. That is because the `use()` function accepts middleware functions directly, as well as wrapping classes. The following two sections describe this casuistry.
+
+### Basic modules
+In case you want to create a basic middleware for OAS Tools, there is no need to declare a new class. OAS Tools directly accepts function types in the use function. This is perfect when your function doesn't require configuration or a previous initialization operation:
+
+```js
+function myCustomMiddleware (req, res, next) {
+    /* Do something */
+
+    next();
+}
+
+oasTools.use(myCustomMiddleware)
+```
+
+> It is a good practise to declare a function with its name instead of directly declare an unnamed function inside `use()`. This is because the server will log the registered middlewares, and therefore, if your function is unnamed it will print 'undefined'.
+
+### Complex modules
+In case your module requires additional configuration, an initialization process or a complex registration, you will need to declare a class. To make that task easier, the Commons library provides a class, _OASBase_,  which already has the definition for basic functions like registering the middleware.
+
+When declaring your middleware as a class, you will need to extend _OASBase_ and declare a static function `initialize` that receives the module configuration and the OpenAPI document in its arguments, and returns an instance of the class.
+
+> You can easily initialize a new module through the command line interface by running `oas-tools init module`. Check out the [CLI section](../cli)
+
+```js
+const { OASBase } = require("@oas-tools/commons");
+
+module.exports.MyMiddleware extends OASBase {
+    
+    constructor(oasFile, middleware) {
+        super(oasFile, middleware); // Call parent constructor
+    }
+
+    static initialize(oasFile, config) {
+        /* The code here will run during OAS Tools initialization */
+        
+        return new MyMiddleware(oasFile, (req, res, next) => {
+            /* The code here will run for every request */
+            
+            next();
+        })
+    }
+}
+
+```
+
+In case you need to perform a more complex registration, you may override the `register()` function, like shown below:
+
+```js
+const { OASBase } = require("@oas-tools/commons");
+
+module.exports.MyMiddleware extends OASBase {
+    
+    ... 
+
+    /* Overridden */
+    register(app) {
+      /* Do something */
+      app.use(super.getMiddleware());
+    }
+}
+```
+
+### Special case: Interceptors
+As explained in the [Validation section](../features/validation#intercepting-responses), there is a special type of middleware that is capable of intercept responses and perform operations before they are sent to the client. We have called that type of middleware _interceptors_ and they are created by overriding the default `res.send()` operation.
+
+When integrating more than one interceptor into the OAS Tools chain, you have to be aware that the order in which they will be executed is inverse to the order in which they are registered. The following flowchart describes this situation:
+
+<Mermaid>
+flowchart LR
+    SEND0(["res.send()"])
+    SEND1(["res.send1()"])
+    SEND2(["res.send2()"])
+    SEND2-->|calls| SEND1-->|calls| SEND0
+    SEND0-.-|modified by| I1
+    I1-.->|produces| SEND1
+    SEND1-.-|modified by| I2
+    I2-.->|produces| SEND2
+    I1(Interceptor 1)
+    I2(Interceptor 2)
+    style I1 stroke-width:3px
+    style I2 stroke-width:3px
+</Mermaid>
+
+As shown in the graph, the first registered interceptor is _Interceptor1_, but the _send1_ function produced by it is executed after the function produced by _Interceptor2_, since the controllers will call `res.send()`, which is overriden by _send2_ function.

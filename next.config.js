@@ -15,12 +15,12 @@ module.exports = withNextra({
     return [
       {
         source: "/docs",
-        destination: "/docs/intro",
+        destination: "/docs/getting-started/overview",
         statusCode: 301,
       },
       {
         source: "/docs",
-        destination: "/docs/intro",
+        destination: "/docs/getting-started/overview",
         statusCode: 302,
       },
       {

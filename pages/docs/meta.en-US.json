@@ -1,3 +1,9 @@
 {
-    "intro": "Introduction"
+    "getting-started": "Getting Started",
+    "fundamentals": "Fundamentals",
+    "features": "Features",
+    "cli": "CLI",
+    "customization": "Customization",
+    "migration": "Migration Guide",
+    "compatibility": "Compatibility"
 }

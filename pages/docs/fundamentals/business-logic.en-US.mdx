@@ -1,0 +1,33 @@
+---
+title: Bussiness logic
+---
+
+# Business logic layer
+The business logic layer in OAS Tools is implemented through controllers that are loaded by the router middleware upon initialization. The [routing section](../features/routing) describes how controllers are loaded and how it can be altered to redirect to other controllers. By default, each path declared in the OpenAPI document will have a controller to handle its requests.
+
+## Controllers
+The controllers are functions that receive the request and response objects from express in order to perform an operation and return a result through `res.send()` or `res.status().send()`.
+
+When writing a controller you should take into account the name of the exported function (more details in the routing section) and the operation that will be performed.
+
+* GET operations typically receive some parameters. Since controllers receive `req` and `res` objects from express, you can access parsed parameters from `res.locals.oas.params` or in case you want to wark with the raw types received by express you can use `req.params` instead.
+
+* POST and PUT operations receive a request body. Just like with paramaters, the body is accesible from `res.locals.oas.body` or `req.body`. 
+
+* Some request may include multipart content. This content will be available at `res.locals.oas.files` or as long as a multipart bodyparser is included in the middleware chain.
+
+> OAS Tools is content agnostic, meaning it could receive JSON or XML in request body as long as a body parser middleware is included in the first position of the middleware chain. Check out the [advanced project setup](../customization/project-setup) for more information about possible integrations with other technologies.
+
+```js
+// UserController.js
+
+module.exports.postUser = function post(req, res) {
+  const params = res.locals.oas?.params;
+  const body = res.locals.oas?.body;
+  const files = res.locals.oas?.files;
+
+  /* Perform some operation, like saving to a database */
+
+  res.status(201).send();
+};
+```

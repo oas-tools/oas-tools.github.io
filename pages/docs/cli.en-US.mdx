@@ -1,0 +1,138 @@
+---
+title: CLI
+---
+
+import Callout from 'nextra-theme-docs/callout'
+
+# Command Line Interface (CLI)
+In order to run the command line interface tool, you can install it with npm:
+```sh
+npm install -g @oas-tools/cli
+```
+Then you can run any commands through `oas-tools <command>`. Besides, it is also possible to run OAS Tools CLI command with `npx`:
+
+```
+npx @oas-tools/cli <command>
+```
+
+> The following sections describe the different commands available through the CLI tool, you can always check them out by running `oas-tools --help`.
+
+## Init
+The `init` command is used for initializing a resource. The available resources to initialize are described in the following sections, you can configure each of them after running:
+
+```
+oas-tools init
+```
+
+An interactive menu will prompt, where you can choose a resource to initialize and configure it easily by answering some questions. However, the interactive prompt is not compatible with every terminal, taht's why it is possible to run each command the traditional way, as the following sections describe.
+
+### Server
+A REST service can be initialized through the command line tool by running the following command:
+
+```
+oas-tools init server <OpenAPI v3 file in YAML or JSON> [options]
+```
+
+The possible options are listed in the table below:
+
+| **Option**                    | **Default**        |                **Description**                |
+|-------------------------------|--------------------|-----------------------------------------------|
+| `-n`, `--path-name <dirpath>` | `generated-server` | Path for the generated directory              |
+| `-p`, `--port <port>`         | `8080`             | Port to which the server will be listening    |
+| `-r`, `--recursive`           | -                  | Generate `path-name` directories recursively  |
+| `-d`, `--dereference`         | -                  | Dereference the OpenAPI document              |
+| `-m`, `--esm`                 | -                  | Use ESM syntax instead of CommonJS            |
+| `-j`, `--json`                | -                  | Generate oas-doc file as JSON instead of YAML |
+| `-c`, `--container`           | -                  | Generate required files to build Docker image |
+| `-z`, `--zip`                 | -                  | Generate a zip and delete the folder          |
+| `-h`, `--help`                | -                  | Display help for command                      |
+
+
+### Module
+A Module can be initialized through the command line tool by running the following command:
+
+```
+oas-tools init module <Module name> [options]
+```
+
+The possible options are listed in the table below:
+
+| **Option**          | **Default** | **Description**                           |
+|---------------------|-------------|-------------------------------------------|
+| `--generate-server` | -           | Generate a test server for the new module |
+| `-m`, `--esm`       | -           | Use ESM syntax instead of CommonJS        |
+| `-h` `--help`       | -           | Display help for command                  |
+
+> Bear in mind that using ESM syntax will set the `type: module` in the generated package.json. You may need to use a transpiler like Babel.js or move to Typescript in order for the new module to be usable on CommonJS servers.
+
+### Development environment
+A complete development workspace can be initialized through the command line tool by running the following command:
+
+```
+oas-tools init dev-env [options]
+```
+
+The possible options are listed in the table below:
+
+| **Option**                   | **Default**                                  | **Description**                   |
+|------------------------------|----------------------------------------------|-----------------------------------|
+| `-g`, `--git-repo <url>`     | `https://github.com/oas-tools/oas-tools.git` | Clone OAS Tools from a repository |
+| `-b`,  `--git-branch <name>` | `develop`                                    | Branch to clone the repo from     |
+| `--clone-commons`            | -                                            | Clone the commons library         |
+| `-h` `--help`                | -                                            | Display help for command          |
+
+### OpenAPI File
+<Callout type="warning" emoji="⚠">
+This command is not recommended to use in the traditional way when provided a file with too many resources declared. Instead switch to a terminal which have interactive support and run `oas-tools init` or create the OpenAPI declaration manually.
+</Callout>
+
+This command lets you generate a valid OpenAPI file from an entity resource:
+
+```
+oas-tools init file <Resource file> -n <names> -i <ids> -o <operations> [options]
+```
+
+| **Option** | **Required** | **Default** | **Description** |
+|---|---|---|---|
+| `-n`, `--resource-name <name...>` | true | - | List containing each resource name |
+| `-i`,  `--id-property <ids...>` | true | - | List containing each resource id property |
+| `-o`, `--operations` | true | - | Object containing available operations for each resource. the object format is: `name=op1,op2,op3...` |
+| `-v`, `--version <version>` | false | `3.0.3` | The OpenAPI version that will be used |
+| `-t`, `--title <title>` | false | `Autogenerated Api` | Title for the described API |
+| `-d`, `--description <text>` | false | `Generated with OAS Tools CLI` | Description for the described API |
+| `-p`, `--path-name <path>` | false | `process.cwd()/oas-doc.[json\|yaml]` | Path where the file will be generated |
+| `-j`, `--json`                | -                  | Generate oas-doc file as JSON instead of YAML |
+| `-h` `--help`       | -           | Display help for command                  |
+
+For example, given the following resource declaration:
+
+```json
+// resources.json
+[
+    {
+        "userId": 1,
+        "name": "User",
+        "email": "user@example.com"
+    },
+    {
+        "petId": 1,
+        "petName": "Garfield",
+        "type": "Cat"
+    }
+]
+```
+
+A valid OpenAPI declaration could be generated running the following command:
+
+```
+oas-tools init file ./resources.json -n User Pet -i userId petId -o User=GET,POST,PUT Pet=GET
+```
+
+The command above will generate an OpenAPI declaration in which the resource _User_ has three operations: GET, POST and PUT, whereas the resource _PET_ has only a GET operation.
+
+## Validate
+The validate command is a simple instruction that takes no options. Its only purpose is to validate an OpenAPI document in the same way that OAS Tools core library does. It will output validation errors formatted as explained in the [Validation section](./features/validation).
+
+```
+oas-tools validate <path to OpenApi file>
+```

@@ -9,16 +9,17 @@ const FEEDBACK_LINK_WITH_TRANSLATIONS = {
 
 export default {
     projectLink: 'https://github.com/oas-tools', // GitHub link in the navbar
-    docsRepositoryBase: 'https://github.com/oas-tools/oas-tools.github.io/blob/master/pages', // base URL for the docs repository
+    docsRepositoryBase: 'https://github.com/oas-tools/oas-tools.github.io/blob/main/pages', // base URL for the docs repository
     titleSuffix: ' – OAS Tools',
     search: true,
     unstable_flexsearch: true,
+    defaultMenuCollapsed: true,
     floatTOC: true,
     nextLinks: true,
     prevLinks: true,
     darkMode: true,
     footer: true,
-    footerEditLink: false,
+    footerEditLink: true,
     i18n: [
       { locale: 'en-US', text: 'English' },
       { locale: 'es-ES', text: 'Español' }

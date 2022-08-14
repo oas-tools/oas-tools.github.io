@@ -1,0 +1,7 @@
+{   
+    "swaggerUI": "Swagger UI",
+    "validation": "Validation",
+    "routing": "Routing",
+    "security": "Security",
+    "error-handling": "Handling errors"
+}

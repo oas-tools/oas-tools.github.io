@@ -1,0 +1,323 @@
+---
+title: Configuración Avanzada
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+import Callout from 'nextra-theme-docs/callout'
+import Bleed from 'nextra-theme-docs/bleed'
+
+# Configuración avanzada
+<Callout type="info" emoji="ⓘ">
+Esta sección proporciona un enfoque más detallado sobre cómo configurar un proyecto de OAS Tools. Utilice la sección [Configuración](../fundamentals/config) para complementar la información de esta página.
+</Callout>
+
+## Añadir una capa de servicios
+La capa de servicio es un patrón arquitectónico aplicado dentro del paradigma de la programación orientada a objetos, cuyo objetivo es proporcionar una capa de abstracción superior sobre la lógica de negocio de la aplicación.
+
+<Mermaid>
+flowchart TB
+    subgraph servicelayer [Service layer]
+        subgraph domainmodel [Domain model]
+            subgraph datasource [Data source layer]
+                db[(   )]
+            end
+        end
+    end
+    style servicelayer rx:50,ry:50
+    style domainmodel rx:35,ry:35
+    style datasource rx:20,ry:20
+</Mermaid>
+
+Para añadir una capa de servicios en un proyecto OAS Tools, cree un directorio que contenga sus servicios y delegue en ellos la lógica de los controladores. Los servicios deben recibir la petición y la respuesta de los controladores. Por ejemplo, el siguiente controlador tendría el este aspecto cuando se utiliza una capa de servicio:
+
+```js
+//Controller.js
+
+const service = require('./service'); // import your service
+
+module.exports.controllerGet = function controllerGet(req, res) {
+  service.get(req, res); // Delegate functionality, passing req, res
+};
+```
+
+A continuación, el servicio correspondiente debe exportar una función `get` que reciba la solicitud y la respuesta:
+
+```js
+//Service.js
+
+module.exports.get = function serviceGet(req, res) {
+    /* Business logic here */
+    res.status(200).send(/* Response body */)
+};
+```
+
+## Integraciones
+Dado que OAS Tools es un framework ligero y flexible, se pueden integrar muchas tecnologías cuando se desarrolla un nuevo servicio. A continuación se enumeran algunas de las integraciones más comunes cuando se desarrollan servicios REST.
+
+### Express body parser
+
+OAS Tools es agnóstico en cuanto al contenido, lo que significa que puede recibir JSON, XML o cualquier otro en el cuerpo de la solicitud, siempre y cuando se incluya un middleware _bodyparser_ en la primera posición de la cadena de middleware.
+
+```js
+//index.js
+
+const http = require('http');
+const app = require("express");
+const oasTools = require("@oas-tools/core");
+const app = express();
+
+const xml = require('express-xml-bodyparser');
+const multer = require('multer');
+
+app.use(express.json()); // JSON bodyparser
+app.use(express.urlencoded()); // URL encoded
+app.use(xml()); // XML bodyparser
+app.use(multer({/* multer config */})); // Multipart requests
+
+var serverPort = 8080;
+
+oasTools.initialize(app).then(() => {
+    http.createServer(app).listen(serverPort, () => console.log("Server started!"));
+})
+```
+
+### Bases de datos
+La arquitectura de OAS Tools permite la integración con cualquier base de datos en la capa de datos.
+
+#### Bases de datos NoSQL - Mongoose
+MongoDB es la base de datos más común cuando se trata de desarrollar servicios con Node.js. Para conectar con una base de datos mongo se utiliza [mongoose](https://mongoosejs.com), una librería _OOP_ que crea la conexión entre MongoDB y el entorno de ejecución de Node.js. Para integrar mongoose con OAS Tools, basta con crear la conexión antes de la inicialización de OAS Tools, declarar algunos modelos y utilizarlos en los controladores:
+
+1. Instalar mongoose:
+
+```
+npm i --save mongoose
+```
+
+2. Crear la conexión a la base de datos e inicializar el servidor después de que se conecte con éxito:
+
+```js
+// index.js
+
+const http = require('http');
+const express = require("express");
+const oasTools = require("@oas-tools/core");
+const mongoose = require('mongoose');
+
+// Mongo connection variables
+const mongoPort = process.env.MONGO_PORT ?? 27017;
+const mongoHost = process.env.MONGO_HOST ?? 'localhost';
+const mongoDBName = process.env.MONGO_DBNAME ?? 'defaultt-db';
+const mongoURL = `mongodb://${mongoHost}:${mongoPort}/${mongoDBName}`;
+
+mongoose.connect(mongoURL).then(async () => {
+    const app = express();
+    const serverPort = 8080;
+
+    app.use(express.json());
+    
+    await oasTools.initialize(app)
+    http.createServer(app).listen(serverPort, () => console.log("Server started!"));
+})
+```
+
+3. Declarar algunos esquemas de mongo:
+
+```js
+// User.js
+
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const UserSchema = new Schema(
+  {
+    name: {
+      type: String,
+      required: true
+    },
+    birthdate: {
+      type: Date,
+      required: true
+    }
+  }
+);
+
+module.exports = mongoose.model('User', UserSchema);
+```
+
+4. Realizar consultas a la base de datos en los controladores:
+
+```js
+// UserController.js
+const User = require('../models/User');
+
+module.exports.postUser = function post(req, res) {
+  const body = res.locals.oas.body;
+  const newUser = new User(body);
+
+  newUser.save().then(() => {
+      res.status(201).send();
+  }).catch((err) => {
+      res.status(500).send({error: err});
+  });
+};
+```
+
+#### Prisma ORM
+[Prisma](https://prisma.io) es un software de mapeo relacional de objetos (ORM) construido para Node.js y Typescript. En la mayoría de los casos se utiliza para conectarse a bases de datos relacionales, típicamente SQL, pero también es capaz de hacer la conexión a bases de datos no relacionales como MongoDB. Para integrarlo con OAS Tools, crea una carpeta que contenga el punto de entrada para el cliente prisma y un archivo para los esquemas:
+
+1. Crea el punto de entrada a Prisma.
+```js
+// prisma/index.js
+
+const { PrismaClient } = require('@prisma/client');
+module.exports = new PrismaClient();
+```
+
+2. Crear el archivo `schema.prisma` que contiene los modelos y la URL de conexión a la base de datos, en este caso nos conectaremos a una base de datos PostgreSQL:
+```prisma
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // environment variable
+}
+
+model User {
+  id          Int @id @default(autoincrement())
+  name        String  @db.VarChar(20)
+  birthDate   DateTime?
+}
+```
+
+3. Hacer consultas a la base de datos en los controladores
+```js
+const prisma = require('../prisma');
+
+module.exports.postUser = function post(req, res) {
+  prisma.user.create({
+    data: res.locals.oas.body
+  })
+    .then(rentals => {
+      res.status(201).send();
+    })
+    .catch(err => {
+      res.status(500).send({error: err});
+    });
+};
+```
+
+4. Opcionalmente, puedes añadir scripts en `package.json` para generar esquemas y crear migraciones:
+```json
+// package.json
+
+{
+    ...
+    "scripts": {
+        "generate-schema": "npx prisma generate",
+        "prisma-migrate": "npm run generate-schema && npx prisma migrate deploy",
+    }
+}
+```
+> Consulte la [documentación de prisma](https://www.prisma.io/docs/) para obtener más información sobre las posibilidades que ofrece esta biblioteca.
+
+
+### Contenedores docker
+OAS Tools puede ejecutarse dentro de un contenedor, ya que es un servicio Node.js. Para que el servicio se ejecute en un contenedor Docker, hay que hacer algunas modificaciones:
+
+> Puedes ejecutar `npm init server <OAS Document> -d` o seleccionar la opción Docker cuando uses el modo interactivo de la CLI para obtener la estructura del servicio capaz de correr dentro de los contenedores Docker.
+
+1. Mueve el código del punto de entrada a un nuevo archivo `server.js`:
+```js
+// server.js
+
+const http = require('http');
+const express = require("express");
+const oasTools = require('oas-tools');
+
+const deploy = async () => {
+  const serverPort = 8080;
+  const app = express();
+  app.use(express.json());
+
+  oasTools.initialize(app).then(() => {
+    http.createServer(app).listen(serverPort, () => console.log("Server started!"));
+  });
+}
+
+const undeploy = () => {
+  process.exit();
+};
+
+module.exports = {
+    deploy: deploy,
+    undeploy: undeploy
+}
+```
+
+2. Modificar el punto de entrada del servicio:
+```js
+//index.js
+
+const server = require('./server');
+const env = process.env.NODE_ENV ? process.env.NODE_ENV : 'production';
+
+server.deploy(env).catch(err => { console.log(err); });
+
+// quit on ctrl-c when running docker in terminal
+process.on('SIGINT', function onSigint () {
+  console.log(`[${new Date().toISOString()}] Got SIGINT (aka ctrl-c in docker). Graceful shutdown`);
+  shutdown();
+});
+
+// quit properly on docker stop
+process.on('SIGTERM', function onSigterm () {
+  console.log(`[${new Date().toISOString()}] Got SIGTERM (docker container stop). Graceful shutdown`);
+  shutdown();
+});
+
+const shutdown = () => {
+  server.undeploy();
+};
+```
+
+3. Crear un `Dockerfile`:
+```docker
+# Dockerfile
+
+FROM node:16.13.0-alpine3.14
+
+WORKDIR /opt/app
+
+COPY . .
+
+RUN npm install --only=prod
+
+ARG NODE_ENV=production
+ENV NODE_ENV $NODE_ENV
+
+ARG PORT=80
+ENV PORT $PORT
+EXPOSE $PORT
+
+CMD [ "node", "index.js" ]
+```
+
+4. Opcionalmente, crear un `.dockerignore`:
+```
+*Dockerfile*
+*docker-compose*
+*.log
+*.md
+.env*
+.git
+.github
+tests
+node_modules
+```
+
+Una vez realizados estos cambios, puede ejecutar `docker build .` para obtener su nuevo contenedor con OAS Tools.

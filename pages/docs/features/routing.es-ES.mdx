@@ -1,0 +1,186 @@
+---
+title: Enrutamiento
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+import Callout from 'nextra-theme-docs/callout'
+
+# Enrutamiento
+El middleware de enrutamiento se registra en la última posición de la cadena de middleware. Se encarga de cargar los controladores y redirigir el flujo de ejecución al correspondiente en función de la petición. Por lo tanto, los controladores son parte del flujo de ejecución del middleware de enrutamiento, y la función `res.send()` que es llamada por ellos es la razón por la que este middleware debe ser registrado en último lugar.
+
+<Mermaid id={"2"}>
+flowchart LR;
+    OAS-PARAMS(Parameter \n Parser)
+    OAS-SECURITY(Security \nMiddleware)
+    OAS-RQVALIDATOR(Request \n Validator)
+    OAS-RPVALIDATOR(Response \n Validator)
+    SEND(["res.send( )"])
+    subgraph OAS-ROUTER [Router Middleware]
+        BUILTIN[Built-in middleware]
+        CONTROLLERS[Controllers]
+        BUILTIN-.->|loads| CONTROLLERS
+    end
+    OAS-PARAMS-->OAS-SECURITY
+    OAS-SECURITY-->OAS-RQVALIDATOR
+    OAS-RQVALIDATOR-->OAS-RPVALIDATOR
+    OAS-RPVALIDATOR-->OAS-ROUTER
+    OAS-RPVALIDATOR-.->|modifies| SEND
+    CONTROLLERS-.->|calls| SEND
+    style OAS-ROUTER stroke-width:3px,rx:5,ry:5
+</Mermaid>
+
+## Cargando los controladores
+Los controladores se cargan en el momento de la inicialización y se almacenan en un diccionario en memoria para redirigir a ellos en cada petición recibida por la API. Hay dos posibilidades a la hora de cargar los controladores:
+
+* Cargarlos a través de campos personalizados en el documento OpenAPI.
+* Uso de anotaciones experimentales de JSDoc en los controladores.
+
+> Estas opciones no se pueden combinar. Por razones de coherencia, debes ceñirte a una de ellas.
+
+### A través del documento OpenAPI
+Esta es la opción predeterminada, ya que `useAnnotations` está desactivada por defecto en la configuración. Utiliza atributos personalizados en el documento OpenAPI para redirigir al controlador correcto cada vez. Sin embargo, OAS Tools proporciona una función auxiliar capaz de generar nombres en caso de que esos atributos no estén configurados.
+
+#### Nombres predefinidos
+Por defecto, cuando no hay atributos en el documento OpenAPI que especifiquen nombres de controladores u operaciones, OAS Tools genera un nombre para ellos:
+
+* Para los controladores, el nombre generado tiene el siguiente formato `{endpoint}Controller` eliminando las barras diagonales `/`.
+* Para los métodos, de forma similar a los controladores, el formato del nombre generado es `func{endpoint}` eliminando las barras de los endpoints.
+
+Por ejemplo, suponiendo el siguiente documento OpenAPI:
+
+```yaml
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Quickstart
+  description: Quickstart for OAS-Tools
+paths:
+  /api/v1/entity:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+```
+
+El nombre generado para el controlador que maneja el endpoint `/api/v1/entity` sería `apiv1entityController`, y el nombre de la operación para el GET sería `funcapiv1entity`. De esta forma, al realizar una petición GET a `{server}/api/v1/entity`, el flujo de ejecución se redirigiría a `funcapiv1entity` dentro de `{controllers}/apiv1entityController.js`.
+
+#### x-router-controller
+La propiedad `x-router-controller` puede añadirse a nivel de ruta o _path_, o a nivel de operación de una declaración OpenAPI. Cuando se declara a nivel de ruta, todas las operaciones para esa ruta serán redirigidas al controlador especificado a menos que se especifique algo diferente a través de `x-router-controller` a nivel de operación. Esto significa que el nivel de operación anula lo especificado en el nivel de ruta. El siguiente ejemplo describe esta situación:
+
+```yaml
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Quickstart
+  description: Quickstart for OAS-Tools
+paths:
+  /api/v1/entity:
+    x-router-controller: EntityController # Path level
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      x-router-controller: DifferentController # Operation level
+      responses:
+        '201':
+          description: Success
+```
+
+Usando la declaración anterior, al hacer una petición GET a `/api/v1/entity`, el flujo de control sería redirigido a `funcapiv1entity` dentro de `EntityController.js` ya que el nombre del controlador por defecto es anulado por el `x-router-controller` a nivel de ruta. Sin embargo, al hacer una petición POST al mismo endpoint, el middleware del enrutador redirigiría a `DifferentController` porque el nivel de operación tiene prioridad sobre la propiedad `x-router-controller` del nivel de ruta.
+
+#### Id de operación
+Los nombres por defecto no funcionan bien cuando se tienen múltiples operaciones en la misma ruta, ya que el nombre generado sería el mismo para todas ellas y por lo tanto la misma función estaría manejando múltiples operaciones REST en un controlador. Ahí es donde entra en acción el atributo `operationId`. OAS Tools lee el `operationId` de cada una de las operaciones declaradas para una ruta y carga la función con ese nombre en el controlador correspondiente, evitando que una misma función maneje múltiples operaciones para una ruta.
+
+```yaml
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Quickstart
+  description: Quickstart for OAS-Tools
+paths:
+  /api/v1/entity:
+    x-router-controller: EntityController
+    get:
+      operationId: getEntity
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      operationId: postEntity
+      responses:
+        '201':
+          description: Success
+```
+
+Cuando se hace una petición GET al endpoint `/api/v1/entity` de un servidor de OAS Tools que implementa la funcionalidad de la declaración OpenAPI anterior, el middleware Router redirigiría el tráfico a la función `getEntity` dentro de `EntityController.js`. 
+
+### A través de anotaciones JSDoc _(Experimental)_
+<Callout type="warning" emoji="⚠">
+Esta función es experimental y puede sufrir cambios o ser completamente eliminada o sustituida por decoradores Javascript en futuras versiones. Se agradecen los comentarios.
+</Callout>
+
+Para utilizar esta característica, primero hay que habilitarla a través de la configuración: `useAnnotations = true`. Una vez habilitada, podrás escribir anotaciones con formato JSDoc para configurar el funcionamiento de tu proyecto. Lee más sobre las anotaciones JSDoc en la [documentación de JSDoc](https://jsdoc.app/). Las siguientes secciones describen las anotaciones predefinidas que se pueden utilizar para configurar el enrutamiento.
+
+#### La anotación Controller
+Esta anotación le dirá al middleware del enrutador que el archivo actual es un controlador que maneja la solicitud a algún endpoint. Debe colocarse en la primera línea del archivo con el siguiente formato: `@oastools {Controlador} <ruta>`.
+
+Usando este enfoque, ya no es necesario nombrar los controladores de una manera determinada. Sin embargo, sigue siendo necesario colocarlos en el directorio `{controllers}/` establecido en la configuración. Por ejemplo, el siguiente archivo se identificaría como un controlador que maneja las solicitudes a `/api/v1/users`:
+
+```js
+// controllers/randomName.js
+
+/** @oastools {Controller} /api/v1/users */
+
+const someDependency = require('whatever');
+...
+```
+
+#### La anotación Method
+Esta anotación debe utilizarse sobre las declaraciones de funciones. Indica al framework qué tipo de solicitud es manejada por la función anotada. Al igual que con la anotación del controlador, esta anotación hace que no sea necesario nombrar las funciones de una manera determinada. El formato que sigue la anotación del método es: `@oastools {method} <METHOD>`, por ejemplo:
+
+```js
+// controllers/randomName.js
+
+/** @oastools {Controller} /api/v1/users */
+
+/**
+ * @oastools {method} GET
+ */
+module.exports.someFunction = function aGetRequest(req, res) {
+  /* Do something */
+};
+```
+
+El código anterior se identificaría como un manejador GET para `/api/v1/users`. De esta forma, cuando se haga una petición GET a ese endpoint, el middleware del router ejecutará esa función.
+
+#### La anotación Path
+La anotación Path permite adjuntar una sub-ruta a la ruta de los controladores. Es útil cuando el endpoint toma parámetros en la ruta. Se formatea como `@oastools {path} <subpath>`, por ejemplo:
+
+```js
+// controllers/randomName.js
+
+/** @oastools {Controller} /api/v1/users */
+
+/**
+ * @oastools {method} GET
+ * @oastools {path} /{id}
+ */
+module.exports.someFunctionWithId = function aGetRequestWithId(req, res) {
+  /* Do something */
+};
+```
+
+La función declarada arriba manejaría las solicitudes GET a `/api/v1/users/{id}`, ya que la sub-ruta `/{id}` ha sido especificada por la anotación.

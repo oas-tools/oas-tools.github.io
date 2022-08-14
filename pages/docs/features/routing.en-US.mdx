@@ -1,0 +1,186 @@
+---
+title: Routing
+---
+
+import Mermaid from '../../../components/RenderMermaid'
+import Callout from 'nextra-theme-docs/callout'
+
+# Routing
+The routing middleware is registered in the last position of the middleware chain. It is in charge of loading the controllers and redirect the execution flow to the corresponding one depending on the request. Therefore, the controllers are part of the router middleware execution flow, and the `res.send()` function being called by them is the reason why this middleware must be registered last.
+
+<Mermaid id={"2"}>
+flowchart LR;
+    OAS-PARAMS(Parameter \n Parser)
+    OAS-SECURITY(Security \nMiddleware)
+    OAS-RQVALIDATOR(Request \n Validator)
+    OAS-RPVALIDATOR(Response \n Validator)
+    SEND(["res.send( )"])
+    subgraph OAS-ROUTER [Router Middleware]
+        BUILTIN[Built-in middleware]
+        CONTROLLERS[Controllers]
+        BUILTIN-.->|loads| CONTROLLERS
+    end
+    OAS-PARAMS-->OAS-SECURITY
+    OAS-SECURITY-->OAS-RQVALIDATOR
+    OAS-RQVALIDATOR-->OAS-RPVALIDATOR
+    OAS-RPVALIDATOR-->OAS-ROUTER
+    OAS-RPVALIDATOR-.->|modifies| SEND
+    CONTROLLERS-.->|calls| SEND
+    style OAS-ROUTER stroke-width:3px,rx:5,ry:5
+</Mermaid>
+
+## Loading controllers
+Controllers are loaded upon initialization and stored in a in-memory map for redirecting to them on each request received by the API. There are two possibilities when it comes to loading controllers:
+
+* Loading them through custom fields in the OpenAPI document.
+* Using experimental JSDoc annotations in controllers.
+
+> These options can't be combined. For consistency reasons, you must stick to one of them.
+
+### Through OpenAPI document
+This is the predetermined option, since `useAnnotations` is disabled by default in configuration. It uses custom attributes on the OpenAPI document to redirect to the correct controller each time. However, OAS Tools provides an auxiliary function capable of generate names in case those attributes are not set.
+
+#### Default controller names
+By default, when there are no attributes in the OpenAPI document that specify controller or operation names, OAS Tools generates a name for them:
+
+* For controllers, the generated has the following format `{endpoint}Controller` removing the endpoint slashes `/`
+* For methods, similarly to controllers, the generated name format is `func{endpoint}` removing endpoint slashes.
+
+For example, assuming the following OpenAPI document:
+
+```yaml
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Quickstart
+  description: Quickstart for OAS-Tools
+paths:
+  /api/v1/entity:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+```
+
+The generated name for the controller handling `/api/v1/entity` endpoint would be `apiv1entityController`, and the operation name for the GET would be `funcapiv1entity`. That way, when making a GET request to `{server}/api/v1/entity`, the execution flow would be redirected to the `funcapiv1entity` inside `{controllers}/apiv1entityController.js`.
+
+#### x-router-controller
+The `x-router-controller` property can be added at the path level or at the operation level of an OpenAPI declaration. When declared at path level, all operations for that path will be redirected to the specified controller unless different is specified through `x-router-controller` at the operation level. That means the operation level overrides what is specified on the path level. The following example describes this situation:
+
+```yaml
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Quickstart
+  description: Quickstart for OAS-Tools
+paths:
+  /api/v1/entity:
+    x-router-controller: EntityController # Path level
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      x-router-controller: DifferentController # Operation level
+      responses:
+        '201':
+          description: Success
+```
+
+Using the above declaration, when making a GET request to `/api/v1/entity`, the control flow would be redirected to `funcapiv1entity` inside `EntityController.js` since the default controller name is overriden by the `x-router-controller` at the path level. However, when making a POST request to the same endpoint, the router middleware would redirect to `DifferentController` because the operation level has priority over the path level `x-router-controller` property.
+
+#### Operation Id
+The default names don't work well when having multiple operations on the same path, since the generated name would be the same for all of them and therefore the same function would be handling multiple REST operations in a controller. That's where the `operationId` attribute takes action. OAS Tools read the `operationId` from each of the operations declared for a path and loads the function with that name in the corresponding controller, preventing a single function handling multiple operations for a path.
+
+```yaml
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Quickstart
+  description: Quickstart for OAS-Tools
+paths:
+  /api/v1/entity:
+    x-router-controller: EntityController
+    get:
+      operationId: getEntity
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      operationId: postEntity
+      responses:
+        '201':
+          description: Success
+```
+
+When making a GET request to `/api/v1/entity` endpoint of an OAS Tools server implementing the functionality for the above OpenAPI declaration, the Router middleware would redirect the traffic to `getEntity` function inside `EntityController.js`. 
+
+### Through JSDoc annotations _(Experimental)_
+<Callout type="warning" emoji="⚠">
+This feature is experimental and may suffer changes or be completely removed or replaced by Javascript decorators in future versions. Feedback is appreciated!
+</Callout>
+
+In order to use this feature, you first need to enable it through configuration: `useAnnotations = true`. Once enabled, you will be able to write JSDoc style annotations to configure your project's operation. Read more about JSDoc annotations in the [JSDoc documentation](https://jsdoc.app/). The next sections describe predefined annotations that can be used to configure routing.
+
+#### The Controller annotation
+This annotation will tell the router middleware that the current file is a controller that handles request for some endpoint path. It must be placed in the first line of the file with the following format: `@oastools {Controller} <path>`.
+
+Using this approach, it is no longer necessary to name your controllers in a certain way. However is is still necessary to place them under the `{controllers}/` directory set in configuration. For example, the following file would be identified as a controller handling requests to `/api/v1/users`:
+
+```js
+// controllers/randomName.js
+
+/** @oastools {Controller} /api/v1/users */
+
+const someDependency = require('whatever');
+...
+```
+
+#### The Method annotation
+This annotation must be used on top of function declarations. It tells the framework which type of request is handled by the annotated function. Just like with controller annotation, this annotations makes no longer necessary to name the functions a certain way. The format followed by the method annotation is: `@oastools {method} <METHOD>`, for example:
+
+```js
+// controllers/randomName.js
+
+/** @oastools {Controller} /api/v1/users */
+
+/**
+ * @oastools {method} GET
+ */
+module.exports.someFunction = function aGetRequest(req, res) {
+  /* Do something */
+};
+```
+
+The code above would be identified as a GET handler for `/api/v1/users`. This way, when making a GET request to that endpoint, the router middleware will execute that function.
+
+#### The Path annotation
+The path annotation allows to attach a subpath to the controllers path. It is useful when the endpoint takes parameters in the path. It is formatted as `@oastools {path} <subpath>`, for example:
+
+```js
+// controllers/randomName.js
+
+/** @oastools {Controller} /api/v1/users */
+
+/**
+ * @oastools {method} GET
+ * @oastools {path} /{id}
+ */
+module.exports.someFunctionWithId = function aGetRequestWithId(req, res) {
+  /* Do something */
+};
+```
+
+The function declared above would handle GET requests to `/api/v1/users/{id}`, since the `/{id}` subpath has been specified by the annotation.

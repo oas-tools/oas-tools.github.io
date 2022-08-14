@@ -1,0 +1,40 @@
+---
+title: Errores
+---
+
+# Manejo de errores
+OAS Tools utiliza internamente clases de error personalizadas que están definidas en la [biblioteca Commons](https://github.com/oas-tools/oas-commons). Adicionalmente, el framework tiene un manejador de errores integrado que está activo por defecto (`middleware.error.disable` está establecido en 'false' en la configuración).
+
+## Manejador integrado
+El manejador integrado captura los errores producidos durante el flujo de ejecución a lo largo de la cadena de middleware y produce una respuesta basada en el tipo de error que se ha lanzado. La siguiente tabla contiene la descripción y la respuesta producida por el manejador para cada error.
+
+| **Error** 	| **Description** 	| **Handler response** 	|
+|---	|---	|:---:	|
+| `RequestValidationError` 	| Error lanzado cuando el contenido de la respuesta o el tipo de contenido es inválido 	| `500 Internal Server Error` or `406 Not Accepted` 	|
+| `SecurityError` 	| Se produce un error cuando faltan las credenciales requeridas 	| `401 Unauthorized` 	|
+| `AuthError` 	| Se lanza un error cuando las credenciales de la solicitud no son válidas o carecen de privilegios 	| `403 Forbidden` 	|
+
+Otras clases, como `ConfigError`, `UnsupportedError` y `RoutingError` no son manejadas por el middleware incorporado ya que son lanzadas al momento de la inicialización y no durante el proceso de solicitud.
+
+## Extendiendo el manejador
+Como se menciona en la sección [Configuración](../fundamentals/config), el manejador de errores incorporado puede ser extendido proporcionando una función personalizada para manejar nuevos errores. Esa función se establece en la configuración y se ejecuta justo después del gestor incorporado.
+
+```js
+// oastools.config.js
+
+module.exports = {
+  middleware: {
+    error: {
+      customHandler: (err, send) => {
+        if (err.name === "JsonWebTokenError") send(403);
+      }
+    }
+  }
+}
+```
+
+La función del manejador personalizado debe tomar dos argumentos: el error y una función de envío. El ejemplo anterior muestra cómo manejar un error lanzado por la biblioteca JWT Node.js. La función de envío toma un argumento obligatorio, que es el código de estado de la respuesta, y opcionalmente puede tomar el cuerpo de la respuesta que se enviará al cliente.
+
+Por defecto, los errores se envían al cliente como un objeto que sigue el siguiente formato `{error: "<nombre del error>: <mensaje de error>" }` pero se puede anular estableciendo el segundo parámetro en la función `send` recibida en los argumentos del manejador.
+
+> Los errores se imprimen en la consola usando el logger configurado, si quieres usar un logger personalizado revisa la sección [logger personalizado](../customization/custom-loger).
