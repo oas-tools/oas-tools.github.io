@@ -127,7 +127,7 @@ export default () => {
                 </div>
                 <div>
                     <span>
-                        <h2>L&iacute;nea de comandos</h2>
+                        <h2>CLI Tool</h2>
                         <p>The command line tool offers an interactive interface through which it is possible to create a new REST service from an OpenAPI document, a new module, a development environment or even an OpenAPI 3.X declaration from a JSON or YAML resource.</p>
                     </span>
                     <BrowserWindow><span style={{height: "100%", width: "100%", fontSize: 120, textAlign: "center", paddingLeft: 20}}>&gt;_</span></BrowserWindow>
