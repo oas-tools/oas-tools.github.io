@@ -41,7 +41,7 @@ Controllers are loaded upon initialization and stored in a in-memory map for red
 This is the predetermined option, since `useAnnotations` is disabled by default in configuration. It uses custom attributes on the OpenAPI document to redirect to the correct controller each time. However, OAS Tools provides an auxiliary function capable of generate names in case those attributes are not set.
 
 #### Default controller names
-By default, when there are no attributes in the OpenAPI document that specify controller or operation names, OAS Tools generates a name for them:
+When there are no attributes in the OpenAPI document that specify user defined names for controllers or operations, OAS Tools generates a name for them:
 
 * For controllers, the generated has the following format `{endpoint}Controller` removing the endpoint slashes `/`
 * For methods, similarly to controllers, the generated name format is `func{endpoint}` removing endpoint slashes.
