@@ -10,7 +10,7 @@ The controllers are functions that receive the request and response objects from
 
 When writing a controller you should take into account the name of the exported function (more details in the routing section) and the operation that will be performed.
 
-* GET operations typically receive some parameters. Since controllers receive `req` and `res` objects from express, you can access parsed parameters from `res.locals.oas.params` or in case you want to wark with the raw types received by express you can use `req.params` instead.
+* GET operations typically receive some parameters. Since controllers receive `req` and `res` objects from express, you can access parsed parameters from `res.locals.oas.params` or in case you want to work with the raw types received by express you can use `req.params` instead.
 
 * POST and PUT operations receive a request body. Just like with paramaters, the body is accesible from `res.locals.oas.body` or `req.body`. 
 
